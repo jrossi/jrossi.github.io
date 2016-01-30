@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <url>
+    <loc>https://jeremyrossi.com/</loc>
+    <lastmod>2016-01-02T18:42:35-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2016/01/02/ossec-the-great-makefile-refactor/</loc>
+    <lastmod>2016-01-02T18:42:35-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/license/</loc>
+    <lastmod>2016-01-01T23:50:55-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/about/</loc>
+    <lastmod>2015-12-31T10:10:35-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2015/12/31/moving-to-hugo-and-github/</loc>
+    <lastmod>2015-12-31T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</loc>
+    <lastmod>2010-01-10T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2010/01/07/junos-juniper-flaw-exposes-core-routers-to-kernel-crash/</loc>
+    <lastmod>2010-01-07T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2010/01/07/junos-juniper-kernel-crash-video/</loc>
+    <lastmod>2010-01-07T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/10/05/ossec-agentless....its-good-but-not-good-enough./</loc>
+    <lastmod>2009-10-05T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/10/03/ossec-agentless-scripts/</loc>
+    <lastmod>2009-10-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/10/02/ossec-agentless-to-save-the-day/</loc>
+    <lastmod>2009-10-02T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/08/25/breaking-twitter-authenication/</loc>
+    <lastmod>2009-08-25T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/08/15/are-borderless-networks-possiable/</loc>
+    <lastmod>2009-08-15T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/08/15/vrf-is-the-new-black-how-i-learned-to-stop-worrying-and-love-the-complexity/</loc>
+    <lastmod>2009-08-15T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://jeremyrossi.com/blog/2009/03/16/rickroll-everyone-with-bluecoat/</loc>
+    <lastmod>2009-03-16T00:00:00+00:00</lastmod>
+  </url>
+  
+</urlset>

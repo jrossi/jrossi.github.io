@@ -1,0 +1,1365 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Ossec on Jeremy Rossi</title>
+    <link>https://jeremyrossi.com/categories/ossec/</link>
+    <description>Recent content in Ossec on Jeremy Rossi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 05 Oct 2009 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://jeremyrossi.com/categories/ossec/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Ossec: Agentless....it&#39;s good, but not good enough. </title>
+      <link>https://jeremyrossi.com/blog/2009/10/05/ossec-agentless....its-good-but-not-good-enough./</link>
+      <pubDate>Mon, 05 Oct 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/10/05/ossec-agentless....its-good-but-not-good-enough./</guid>
+      <description>
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2009/11/Screen-shot-2009-11-02-at-8.06.14-PM.png&#34; border=&#34;1&#34; alt=&#34;ossec_logo&#34; width=&#34;66&#34; height=&#34;64&#34; /&gt;&lt;/div&gt;
+
+&lt;p&gt;In working with OSSEC agentless for some time now I have come across
+some limitations in the implementation that I felt needed to be
+addressed. As OSSEC agentless is designed to preform &lt;code&gt;syscheck&lt;/code&gt;
+functions on remote hosts, more general features are hard (if not
+impossible) to write into a script.&lt;/p&gt;
+
+&lt;p&gt;Currently in OSSEC, agentless scripts are limited to the following commands:&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Command&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;INFO:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The string following INFO will be logged to &lt;code&gt;/var/ossec/logs/ossec.log&lt;/code&gt; by OSSEC for debugging.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;ERROR:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Error needs to be reported.  The string following this command is forwarded to the OSSEC manager, and the OSSEC process closes down the script.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;STORE:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;All the lines that follow this command will be added, stored, and compared to previous runs of the script.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;FWD:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The string following FWD is a colon delimited list of stats on a given file.  Example: &lt;code&gt;FWD: &amp;lt;size&amp;gt;:&amp;lt;permissions&amp;gt;:&amp;lt;uid&amp;gt;:&amp;lt;gid&amp;gt;:&amp;lt;md5&amp;gt;:&amp;lt;sha1&amp;gt; &amp;lt;path &amp;amp; file&amp;gt;&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Given the choices listed here more advanced agentless scripts are just
+not reasonably possible. I require the ability to pass more information
+to the OSSEC agentless process and have it raise alerts based on this
+information.&lt;/p&gt;
+
+&lt;h3 id=&#34;solution-patch-ossec:cb8e1494328cb9e13d88df53d8999d2b&#34;&gt;Solution patch OSSEC&lt;/h3&gt;
+
+&lt;p&gt;So I starting digging into the OSSEC code. I am not a C coder, I don&amp;rsquo;t
+even play one on TV, but the OSSEC&amp;rsquo;s code is clear and has just enough
+comments to allow me to understand how things function. Once I saw where
+the communication happens between ossec-agentless and it&amp;rsquo;s subprocess I
+was quickly able to add a new OSSEC Agentless Command.&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Command&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;LOG:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The string following LOG: will be passed into &lt;code&gt;ossec-analysisd&lt;/code&gt; and processed like all other log messages.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;This simple command allow scripts to generate messages that will get
+processed by the standard OSSEC decoders and rules.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Direct download of patch: &lt;a href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt&#34; title=&#34;agentless.patch.txt&#34;&gt;agentless.patch.txt&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;patching-ossec:cb8e1494328cb9e13d88df53d8999d2b&#34;&gt;Patching OSSEC&lt;/h3&gt;
+
+&lt;p&gt;The patch I created works with the current code release of OSSEC. To
+apply the patch, first download OSSEC version 2.2 from the website. In
+the instructions below, I have changed to the tmp directory first as we
+will be removing the source files once we have finished the install.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# cd /tmp 
+obsd46# ftp http://www.ossec.net/files/ossec-hids-2.2.tar.gz
+Trying 75.126.165.213...
+Requesting http://www.ossec.net/files/ossec-hids-2.2.tar.gz
+100% |******************************************************************|   692 KB    00:03    
+Successfully retrieved file.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now expand the downloaded archive and change into the newly created
+directory &lt;code&gt;ossec-hids-2.2&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# tar xfz ossec-hids-2.2.tar.gz                                                                                                                                                   
+obsd46# cd ossec-hids-2.2       
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is where most of the work will happen, but first we need to download the patch.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ftp http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt                             
+Trying 75.101.150.229...
+Requesting http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt
+100% |******************************************************************| 10278       00:00    
+Successfully retrieved file.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we just apply the patch. We will use the &lt;code&gt;patch&lt;/code&gt; command do
+this, but using the argument &lt;code&gt;-p1&lt;/code&gt; to apply the patch cleanly to all
+sub-directories.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# patch -p1 &amp;lt; agentless.patch.txt  
+Hmm... this looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/decoder.xml
+ |--- a/etc/decoder.xml  Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/decoder.xml  Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/decoder.xml using Plan A...
+Hunk #1 succeeded at 70.
+Hunk #2 succeeded at 1498.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/rules/agentless_rules.xml
+ |--- /dev/null  Thu Jan 01 00:00:00 1970 +0000
+ |+++ b/etc/rules/agentless_rules.xml    Fri Nov 06 19:53:36 2009 +000 0
+ |-------------------------
+(Creating file etc/rules/agentless_rules.xml...)
+Patching file etc/rules/agentless_rules.xml using Plan A...
+Empty context always matches.
+Hunk #1 succeeded at 1.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/rules/ossec_rules.xml
+ |--- a/etc/rules/ossec_rules.xml        Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/rules/ossec_rules.xml        Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/rules/ossec_rules.xml using Plan A...
+Hunk #1 succeeded at 153.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/templates/config/rules.template
+ |--- a/etc/templates/config/rules.template      Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/templates/config/rules.template      Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/templates/config/rules.template using Plan A...
+Hunk #1 succeeded at 44.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 src/agentlessd/scripts/nmap_policy
+ |--- /dev/null  Thu Jan 01 00:00:00 1970 +0000
+ |+++ b/src/agentlessd/scripts/nmap_policy       Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+(Creating file src/agentlessd/scripts/nmap_policy...)
+Patching file src/agentlessd/scripts/nmap_policy using Plan A...
+Empty context always matches.
+Hunk #1 succeeded at 1.
+done 
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we have a completed all the OSSEC 2.2 code patches for the
+expanded agentless features. At this point you will need to
+compile and install OSSEC. For full details the main
+&lt;a href=&#34;http://www.ossec.net/main/documentation/&#34;&gt;OSSEC website&lt;/a&gt; covers this topic in
+more detail. A key thing to note here is that OSSEC has to be installed
+as a server or locally.&lt;/p&gt;
+
+&lt;p&gt;Please see my article on how to enable &lt;a href=&#34;http://praetorianprefect.com/archives/2009/11/ossec-agentless-to-save-the-day/&#34;&gt;OSSEC agentless monitoring&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&#34;making-use-of-the-new-features:cb8e1494328cb9e13d88df53d8999d2b&#34;&gt;Making use of the new features&lt;/h3&gt;
+
+&lt;p&gt;Now that we have a patched and installed version of OSSEC we can take
+advantage of the newly added features. Included with the patch is a
+new Agentless OSSEC script &lt;code&gt;nmap_policy&lt;/code&gt;. This script is really not
+designed for production use, rather it&amp;rsquo;s geared to show how to use the
+new agentless features.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s get into the details. Start by running the new script and looking
+at the output. I should note that this script uses &lt;code&gt;python&lt;/code&gt; and needs at
+least version 2.5 in order to parse the xml output from &lt;code&gt;nmap&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd45# (cd /var/ossec &amp;amp;&amp;amp; ./agentless -b 21,23,80 -n 172.17.20.20/32 )
+INFO: Starting
+INFO: running `nmap -p 21,23,80 -oX - 172.17.20.0/24` command
+INFO: completed `nmap -p 21,23,80 -oX - 172.17.20.0/24` command
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+LOG:alert=11 Policy violation port 23 (telnet) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.19 (00:18:8B:1E:27:A5 Dell)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.20 (00:0C:29:84:72:11 VMware)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.20 (00:0C:29:84:72:11 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.21 (00:0C:29:8D:39:E4 VMware)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.21 (00:0C:29:8D:39:E4 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.31 (00:0C:29:29:CF:35 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.32 (00:0C:29:58:5F:C1 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.57 (00:1E:0B:9D:C0:03 Hewlett Packard)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.91 (00:14:38:D8:01:DD Hewlett Packard)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.134 (00:1E:C2:03:2D:E8 Apple)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.202 (00:19:B9:24:7E:F2 Dell)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.203 (00:19:B9:24:7E:F2 Dell)
+INFO: Ending
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So what this script does is run &lt;code&gt;nmap&lt;/code&gt; and looks for ports that are open
+and not allowed per an internal policy. In this example I checked for
+http, telnet, and ftp, but the selection of ports is configurable with
+the &lt;code&gt;-b&lt;/code&gt;/&lt;code&gt;--badport&lt;/code&gt; arguments. The second argument &lt;code&gt;-n&lt;/code&gt;/&lt;code&gt;--network&lt;/code&gt; is
+used to specify which IP addresses to scan. The format of this option is
+very liberal, in fact any valid &lt;code&gt;nmap&lt;/code&gt; network specification will work.&lt;/p&gt;
+
+&lt;p&gt;Just as I specified above any string following the &lt;code&gt;LOG:&lt;/code&gt; OSSEC
+agentless command will be pushed to the &lt;code&gt;ossec-analysisd&lt;/code&gt; process for
+decoding and rules filtering.&lt;/p&gt;
+
+&lt;p&gt;As part of the patch I have also included an updated &lt;code&gt;decode.xml&lt;/code&gt; and
+a new &lt;code&gt;agentless_rules.xml&lt;/code&gt; to begin the first level of processing
+of output from the scripts. Using &lt;code&gt;ossec-logtest&lt;/code&gt; we can see this in
+action, but due to how &lt;code&gt;ossec-agentlessd&lt;/code&gt; processes the messages we need
+to slightly modify the output for it to work with &lt;code&gt;ossec-logtest&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# (cd /var/ossec &amp;amp;&amp;amp; ./bin/ossec-logtest )                                                                                                                                                            
+2009/11/06 20:48:28 ossec-testrule: INFO: Started (pid: 9789).
+ossec-testrule: Type one log per line.
+
+Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+
+
+**Phase 1: Completed pre-decoding.
+       full event: &#39;Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)&#39;
+       hostname: &#39;a&#39;
+       program_name: &#39;(null)&#39;
+       log: &#39;Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)&#39;
+
+**Phase 2: Completed decoding.
+       decoder: &#39;agentless&#39;
+       id: &#39;11&#39;
+       extra_data: &#39;Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)&#39;
+
+**Phase 3: Completed filtering (rules).
+       Rule id: &#39;10011&#39;
+       Level: &#39;11&#39;
+       Description: &#39;Agentless.&#39;
+**Alert to be generated.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can see from the output that a level 11 alert would be generated
+for the line we just tested with &lt;code&gt;ossec-logtest&lt;/code&gt;. In the case of the
+full output of the &lt;code&gt;nmap_policy&lt;/code&gt; script it has 13 &lt;code&gt;LOG:&lt;/code&gt; lines returned
+and would have generated 13 alerts. Needless to say this is a lot of
+alerts, so it&amp;rsquo;s up to you to tune and configure this correctly for your
+environment.&lt;/p&gt;
+
+&lt;p&gt;In our lab here at &lt;a href=&#34;http://www.praetoriansecuritygroup.com&#34;&gt;Praetorian&lt;/a&gt;
+we don&amp;rsquo;t ever want to see the telnet port open. So lets make this script
+live, but only checking for telnet. I am going to once again make use of
+&lt;a href=&#34;http://bitbucket.org/jrossi/ossec-hids-tools/&#34;&gt;ossec-hids-tools&lt;/a&gt; to add
+the new agentless monitoring. As is always the case a restart of OSSEC
+will be needed.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ossec-config --section agentless --add --host jrossi@172.17.20.0 --type nmap_policy 
+--frequency 86400 --state periodic --argv &amp;quot;-p 23 -n 172.17.20.0/24&amp;quot;
+obsd46# (cd /var/ossec &amp;amp;&amp;amp; ./bin/ossec-control restart )
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;While adding this new agentless script I had to specify a &lt;code&gt;--host&lt;/code&gt;
+argument. This is required for OSSEC agentless as the host field is
+&lt;strong&gt;NOT&lt;/strong&gt; optional. In the case of the script &lt;code&gt;nmap_policy&lt;/code&gt; it will have
+no effect, but this needs to be taken into account when writing your own
+scripts as the first argument passed will always be what you specified
+as the host.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Ossec: Agentless Scripts</title>
+      <link>https://jeremyrossi.com/blog/2009/10/03/ossec-agentless-scripts/</link>
+      <pubDate>Sat, 03 Oct 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/10/03/ossec-agentless-scripts/</guid>
+      <description>
+
+&lt;p&gt;In my last OSSEC post &lt;a href=&#34;https://jeremyrossi.com/archives/2009/11/ossec-agentless-to-save-the-day/&#34;&gt;OSSEC: Agentless to save the day&lt;/a&gt; I went over how
+to setup agentless monitoring using the built in scripts. With this post
+I am going to get into the details of how to modify the OSSEC supplied
+scripts to do your bidding.&lt;/p&gt;
+
+&lt;h2 id=&#34;table-of-contents:7ec6254becbb3beb032261b324a91668&#34;&gt;Table of Contents&lt;/h2&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2009/11/Screen-shot-2009-11-02-at-8.06.14-PM.png&#34; border=&#34;1&#34; alt=&#34;ossec_logo&#34; width=&#34;66&#34; height=&#34;64&#34; /&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;#agentless_scripts&#34;&gt;Agentless Scripts&lt;/a&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#agentless_scripts_periodic_diff&#34;&gt;Periodic diff Specification&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#agentless_scripts_periodic&#34;&gt;Periodic Specification&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;#ssh_integrity_check_linux&#34;&gt;Agentless Script: ssh_integrity_check_linux&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;#ssh_dmz_linux&#34;&gt;Our own Agentless Script: ssh_dmz_linux&lt;/a&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#finding_setuid_setgid&#34;&gt;Finding all setuid and setgid files&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#finding_app_files&#34;&gt;Finding all authentication and applications specific files&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#merging_finds&#34;&gt;Merging finds&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#creating_ssh_dmz_linux&#34;&gt;Creating ssh_dmz_linux&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#testing_ssh_dmz_linux&#34;&gt;Testing&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;agentless_scripts:7ec6254becbb3beb032261b324a91668&#34;&gt;Agentless Scripts&lt;/h2&gt;
+
+&lt;p&gt;All scripts that work with OSSEC agentless security monitoring use
+&lt;code&gt;stdout&lt;/code&gt; for communication and reporting to the OSSEC server. This makes
+writing scripts for OSSEC simple as you do not need to do anything more
+then print or echo to &lt;code&gt;stdout&lt;/code&gt;. The format of the output does need to
+meet the OSSEC specification, but that is a very simple thing to do.&lt;/p&gt;
+
+&lt;p&gt;Before we move to the specification details I need to explain that OSSEC
+agentless runs to different types of scripts. Namely the following:&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Type&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;periodic_diff&lt;/td&gt;
+&lt;td&gt;Scripts output data to the OSSEC agentless process that will then be compared to past runs and if there are differences an OSSEC alert will be generated.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;periodic&lt;/td&gt;
+&lt;td&gt;Scripts output controlled messages to the OSSEC agentless process that will then be processed accordingly.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h4 id=&#34;agentless_scripts_periodic_diff:7ec6254becbb3beb032261b324a91668&#34;&gt;Periodic diff Specification&lt;/h4&gt;
+
+&lt;p&gt;The output for periodic_diff is very simple, any and all output after
+the agentless command &amp;ldquo;&lt;code&gt;STORE: now&lt;/code&gt;&amp;rdquo; and before the next OSSEC Command
+will be stored and compared for differences. This type of script is
+mostly used for hardware devices such as Cisco IOS, Juniper JunOS, and
+other products.&lt;/p&gt;
+
+&lt;p&gt;Scripts that use the &lt;code&gt;periodic_diff&lt;/code&gt; make use of the following commands:&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Command&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;INFO:&lt;/td&gt;
+&lt;td&gt;The string following INFO will be logged to &lt;code&gt;/var/ossec/logs/ossec.log&lt;/code&gt; by OSSEC for debugging.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;ERROR:&lt;/td&gt;
+&lt;td&gt;Error needs to be reported.  The string following this command is forwarded to the OSSEC manager, and the OSSEC process closes down the script.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;STORE:&lt;/td&gt;
+&lt;td&gt;All the lines that follows this command will be added stored and compared to previous runs of the script&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Here is an example of a periodic_diff script that comes with OSSEC.
+(&lt;em&gt;Please note with all agentless scripts you must be in the root of the
+OSSEC install for them to function correctly&lt;/em&gt;.)&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46#( cd /var/ossec &amp;amp;&amp;amp; ./agentless/ssh_pixconfig_diff cisco@172.17.0.1 &#39;show hardware&#39; )
+spawn ssh -c des cisco@172.17.0.1
+No valid ciphers for protocol version 2 given, using defaults.
+Password: 
+
+a.zfw.tss&amp;gt;INFO: Starting.
+enable
+Password: 
+a.zfw.tss#ok on enable pass
+
+STORE: now
+no pager
+             ^
+% Invalid input detected at &#39;^&#39; marker.
+
+a.zfw.tss#term len 0
+a.zfw.tss#terminal pager 0
+                     ^
+% Invalid input detected at &#39;^&#39; marker.
+
+a.zfw.tss#show version | grep -v Configuration last| up
+                         ^
+% Invalid input detected at &#39;^&#39; marker.
+
+a.zfw.tss#show running-config
+Building configuration...
+
+
+Current configuration : 14631 bytes
+!
+version 12.4
+
+[................SNIP CONFIG.................]
+
+a.zfw.tss#show hardware
+Cisco IOS Software, 3800 Software (C3845-ADVENTERPRISEK9-M), Version 12.4(24)T1, RELEASE SOFTWARE (fc3)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2009 by Cisco Systems, Inc.
+Compiled Fri 19-Jun-09 19:21 by prod_rel_team
+
+ROM: System Bootstrap, Version 12.3(11r)T2, RELEASE SOFTWARE (fc1)
+
+a.zfw.tss uptime is 1 week, 5 days, 7 hours, 29 minutes
+System returned to ROM by reload at 13:34:26 UTC Thu Oct 22 2009
+System image file is &amp;quot;flash:c3845-adventerprisek9-mz.124-24.T1.bin&amp;quot;
+
+
+This product contains cryptographic features and is subject to United
+States and local country laws governing import, export, transfer and
+use. Delivery of Cisco cryptographic products does not imply
+third-party authority to import, export, distribute or use encryption.
+Importers, exporters, distributors and users are responsible for
+compliance with U.S. and local country laws. By using this product you
+agree to comply with applicable laws and regulations. If you are unable
+to comply with U.S. and local laws, return this product immediately.
+
+A summary of U.S. laws governing Cisco cryptographic products may be found at:
+http://www.cisco.com/wwl/export/crypto/tool/stqrg.html
+
+If you require further assistance please contact us by sending email to
+export@cisco.com.
+
+Cisco 3845 (revision 1.0) with 1007615K/40960K bytes of memory.
+Processor board ID FTX1043A2CR
+2 Gigabit Ethernet interfaces
+1 ATM interface
+1 Virtual Private Network (VPN) Module
+4 CEM T1/E1 ports
+DRAM configuration is 64 bits wide with parity enabled.
+479K bytes of NVRAM.
+492015K bytes of USB Flash usbflash0 (Read/Write)
+62720K bytes of ATA System CompactFlash (Read/Write)
+
+Configuration register is 0x2102
+
+
+a.zfw.tss#exit
+Connection to 172.17.0.1 closed by remote host.
+Connection to 172.17.0.1 closed.
+
+INFO: Finished.
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In this example above the script would store the contents between
+&amp;ldquo;&lt;code&gt;STORE: now&lt;/code&gt;&amp;rdquo; and &amp;ldquo;&lt;code&gt;INFO: Finished.&lt;/code&gt;&amp;rdquo;. If this is the first time that
+OSSEC agentless has run this command no alerts would be generated and
+the contents would have been saved for later comparisons. If OSSEC
+agentless has a stored copy from a previous execution it will compare
+the files and if there are any differences it will generate an alert.&lt;/p&gt;
+
+&lt;h4 id=&#34;agentless_scripts_periodic:7ec6254becbb3beb032261b324a91668&#34;&gt;Periodic Specification&lt;/h4&gt;
+
+&lt;p&gt;The periodic specification has more options and gives more control to
+the script writer on what actions OSSEC will take. Once again &lt;code&gt;stdout&lt;/code&gt;
+is used for communication so script writing is easy.&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Command&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;INFO:&lt;/td&gt;
+&lt;td&gt;The string following INFO will be logged to &lt;code&gt;/var/ossec/logs/ossec.log&lt;/code&gt; by OSSEC for debugging.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;ERROR:&lt;/td&gt;
+&lt;td&gt;Error needs to be reported.  The string following this command is forwarded to the OSSEC manager, and the OSSEC process closes down the script.&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;FWD:&lt;/td&gt;
+&lt;td&gt;The string following FWD is a colon delimited list of stats on a given file.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Example of real &lt;code&gt;FWD:&lt;/code&gt; command.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;FWD: 19419:600:0:0:fb30de5b02029950ae05885a3d407c8c:017cd6118cdc166ee8eba8af1b7fdad6763203d3 ./.bash_history
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The Fields break down in to the following&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Field&lt;/th&gt;
+&lt;th&gt;Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;FWD:&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;The OSSEC Command&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;19419&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Total size of file, in bytes&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;600&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Access rights of file in octal&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;0&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;User ID of file owner&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;0&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Group ID of file owner&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;fb30de5b02029950ae05885a3d407c8c&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;MD5 Hash of file&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;017cd6118cdc166ee8eba8af1b7fdad6763203d3&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;SHA1 Hash of file&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;./.bash_history&lt;/td&gt;
+&lt;td&gt;Path and name of file&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Using this format OSSEC can store the information about a file and then
+in the future run compare that they are the same. If for some reason
+they are not the same an alert will be generated. Here is an example of
+a password change on a linux system:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;OSSEC HIDS Notification.
+2009 Sep 21 15:19:00
+
+Received From: (ssh_integrity_check_linux) root@172.17.20.20-&amp;gt;syscheck
+Rule: 550 fired (level 7) -&amp;gt; &amp;quot;Integrity checksum changed.&amp;quot;
+Portion of the log(s):
+
+Integrity checksum changed for: &#39;/etc/shadow&#39;
+Old md5sum was: &#39;0d92e12c92f3edcf9d8876ea57c5f677&#39;
+New md5sum is : &#39;2bd51b61dea17c5682fb2c0cf4f92c63&#39;
+Old sha1sum was: &#39;2270c03a920ef8dd50e11cefdef046a8660f7a29&#39;
+New sha1sum is : &#39;d9518ea9022b10d07f81925c6d7f2abb4364b548&#39;
+
+--END OF NOTIFICATION
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;ssh_integrity_check_linux:7ec6254becbb3beb032261b324a91668&#34;&gt;Agentless Script: ssh_integrity_check_linux&lt;/h2&gt;
+
+&lt;p&gt;Now that we have an understanding of how agentless scripts communicate
+with the parent OSSEC preocess, let&amp;rsquo;s move on to a working example. The
+OSSEC supplied script &lt;code&gt;ssh_integrity_check_linux&lt;/code&gt; is a great place to
+start, so lets open it up and see what is going on.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-expect&#34;&gt;obsd46# cat /var/ossec/agentless/ssh_integrity_check_linux
+ #!/usr/bin/env expect
+
+ # @(#) $Id: ssh_integrity_check_linux,v 1.11 2009/06/24 17:06:21 dcid Exp $
+ # Agentless monitoring
+ #
+ # Copyright (C) 2009 Trend Micro Inc.
+ # All rights reserved.
+ #
+ # This program is a free software; you can redistribute it
+ # and/or modify it under the terms of the GNU General Public
+ # License (version 3) as published by the FSF - Free Software
+ # Foundation.
+
+
+ # Main script.
+source &amp;quot;agentless/main.exp&amp;quot;
+
+
+ # SSHing to the box and passing the directories to check.
+if [catch {
+    spawn ssh $hostname
+} loc_error] {
+    send_user &amp;quot;ERROR: Opening connection: $loc_error.\n&amp;quot;
+    exit 1;
+}
+
+
+source $sshsrc
+source $susrc
+
+set timeout 600
+send &amp;quot;echo \&amp;quot;INFO: Starting.\&amp;quot;; for i in `find $args 2&amp;gt;/dev/null`;do tail \$i &amp;gt;/dev/null 2&amp;gt;&amp;amp;1 &amp;amp;&amp;amp; 
+md5=`md5sum \$i | cut -d \&amp;quot; \&amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sha1sum \$i | cut -d \&amp;quot; \&amp;quot; -f
+ 1` &amp;amp;&amp;amp; echo FWD: `stat --printf \&amp;quot;%s:%a:%u:%g\&amp;quot; \$i`:\$md5:\$sha1 \$i; done; exit\r&amp;quot;
+send &amp;quot;exit\r&amp;quot;
+
+expect {
+    timeout {
+        send_user &amp;quot;ERROR: Timeout while running commands on host: $hostname .\n&amp;quot;
+        exit 1;
+    }
+    eof {
+        send_user &amp;quot;\nINFO: Finished.\n&amp;quot;
+        exit 0;
+    }
+}
+
+exit 0;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The comments in the script hints to what is going on, but everything up
+to and including &lt;code&gt;set timeout 600&lt;/code&gt; is related to setting up the &lt;code&gt;expect&lt;/code&gt;
+functions and code for handling the &lt;code&gt;ssh&lt;/code&gt; subprocess and connecting to
+the remote host. I am not going to spend any time with this section, I
+am just going to make use of it.&lt;/p&gt;
+
+&lt;p&gt;The meat of what is getting processed on the remote end all happens in
+two lines.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;send &amp;quot;echo \&amp;quot;INFO: Starting.\&amp;quot;; for i in `find $args 2&amp;gt;/dev/null`;do tail \$i &amp;gt;/dev/null 2&amp;gt;&amp;amp;1 &amp;amp;&amp;amp; 
+md5=`md5sum \$i | cut -d \&amp;quot; \&amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sha1sum \$i | cut -d \&amp;quot; \&amp;quot; -f
+ 1` &amp;amp;&amp;amp; echo FWD: `stat --printf \&amp;quot;%s:%a:%u:%g\&amp;quot; \$i`:\$md5:\$sha1 \$i; done; exit\r&amp;quot;
+send &amp;quot;exit\r&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s break this down to see what is happening.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;send&lt;/code&gt; command pushes the following string to the ssh subprocess
+which gets run on the remote end of the connection. Before the script is
+sent to the remote host &lt;code&gt;expect&lt;/code&gt; internally processes the string. This
+includes searching for variables and removing any control characters.&lt;/p&gt;
+
+&lt;p&gt;The control characters are first taken into account, and in the case
+of our example all escaped special characters are processed. &lt;code&gt;\&amp;quot;&lt;/code&gt;,
+&lt;code&gt;\r&lt;/code&gt;, and &lt;code&gt;\$&lt;/code&gt; would be replaced with &lt;code&gt;&amp;quot;&lt;/code&gt;, &amp;ldquo;&lt;code&gt;carriage return&lt;/code&gt;&amp;rdquo;, and &lt;code&gt;&amp;amp;&lt;/code&gt;
+respectively. The reason the escape characters are needed so that they
+will not interfere with &lt;code&gt;expects&lt;/code&gt; own string processing and control. We
+will need to handle control characters in this way when we begin writing
+our own script.&lt;/p&gt;
+
+&lt;p&gt;While special characters were being handled by &lt;code&gt;expect&lt;/code&gt; it also
+looked for variables to replace, in this case it will find &lt;code&gt;$args&lt;/code&gt;
+and replace it with what ever arguments were passed to the script
+by the OSSEC agentless process. If we specified the following in
+&lt;code&gt;/var/ossec/etc/ossec.conf&lt;/code&gt; the &lt;code&gt;$args&lt;/code&gt; variable would be replaced with
+&amp;ldquo;&lt;code&gt;/bin /etc /sbin&lt;/code&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;  &amp;lt;agentless&amp;gt;
+    &amp;lt;type&amp;gt;ssh_integrity_check_linux&amp;lt;/type&amp;gt;
+    &amp;lt;frequency&amp;gt;3600&amp;lt;/frequency&amp;gt;
+    &amp;lt;host&amp;gt;root@172.17.20.20&amp;lt;/host&amp;gt;
+    &amp;lt;state&amp;gt;periodic&amp;lt;/state&amp;gt;
+    &amp;lt;arguments&amp;gt;/bin /etc /sbin&amp;lt;/arguments&amp;gt;
+  &amp;lt;/agentless&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Back to the commands that get run. Once &lt;code&gt;expect&lt;/code&gt; has completed
+replacement we are left with this command.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;echo &amp;quot;INFO: Starting.&amp;quot;; for i in `find /bin /etc /sbin 2&amp;gt;/dev/null`;do tail $i &amp;gt;/dev/null 2&amp;gt;&amp;amp;1 &amp;amp;&amp;amp; 
+md5=`md5sum $i | cut -d &amp;quot; &amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sha1sum $i | cut -d &amp;quot; &amp;quot; -f
+ 1` &amp;amp;&amp;amp; echo FWD: `stat --printf &amp;quot;%s:%a:%u:%g&amp;quot; $i`:$md5:$sha1 $i; done; exit
+exit
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This script then goes and uses the Unix &lt;code&gt;find&lt;/code&gt; command to locate all
+files in the specified path (from the arguments passed) and generates
+an OSSEC &lt;code&gt;FWD:&lt;/code&gt; command for each one and prints it to &lt;code&gt;stdout&lt;/code&gt;. Making
+use of the commands &lt;code&gt;stat&lt;/code&gt;, &lt;code&gt;md5sum&lt;/code&gt;, and &lt;code&gt;sha1sum&lt;/code&gt; to generate the data
+needed. Here is an example of the output checking.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;spawn ssh root@172.17.20.20
+Last login: Wed Nov  4 11:32:51 2009 from 172.17.20.131^M
+[linux26 ~]# 
+INFO: Started.
+echo &amp;quot;INFO: Starting.&amp;quot;; for i in `find {/bin /etc /sbin} 2&amp;gt;/dev/null`;do tail $i &amp;gt;/dev/null 2&amp;gt;&amp;amp;1 &amp;amp;&amp;amp; 
+md5=`md5sum $i | cut -d &amp;quot; &amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sh a1sum $i | cut -d &amp;quot; &amp;quot; -f
+ 1` &amp;amp;&amp;amp; echo FWD: `stat --printf &amp;quot;%s:%a:%u:%g&amp;quot; $i`:$md5:$sha1 $i; done; exit
+INFO: Starting.
+FWD: 833:644:0:0:4148adea745af5121963f6b731b60013:60877a6f6981b16c0d53d32bcd3f07d41cfb5bd4 /etc/modprobe.d/
+glib2.sh
+[...........SNIP............]
+FWD: 1696:644:0:0:c2bd306b205ad9e81fb02ce6b225d384:5244d65815cb228a4fac7bc4c1c7774508fb7505 /etc/nsswitch.conf
+FWD: 85179:644:0:0:8db574225cd1068b47e77ceccd96f8ff:b5ef6183b35ee9d1b66ed2cefe98003c5bd99192 /etc/sensors.conf
+FWD: 49:644:0:0:52c3df2f1edf30ca3db82174be3a68d2:1934648f2429b70b1f729d343a6956fb0ea73136 /etc/php.d/imap.ini
+FWD: 873:644:0:0:04559d1fe27ecd079b69df8b319f937e:e5cab1bf1f9e4bc4386309f4e00a9b7be3e543a2 /etc/php.d/memcache.ini
+FWD: 59:644:0:0:94636ba6c4bac9d8d49d9de1a513ae0c:41d5164a2c6e332e40edf55c59a2d0df8a260964 /etc/php.d/pdo_mysql.ini
+FWD: 49:644:0:0:917dbbafbfaaa20f660063d627123dae:0e829d4ffc69f58dc258510b4b8452412e31ccc5 /etc/php.d/json.ini
+FWD: 0:644:0:0:d41d8cd98f00b204e9800998ecf8427e:da39a3ee5e6b4b0d3255bfef95601890afd80709 /etc/wvdial.conf
+logout
+Connection to 172.17.20.20 closed.
+
+INFO: Finished.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;ssh_dmz_linux:7ec6254becbb3beb032261b324a91668&#34;&gt;Our own Agentless Script: ssh_dmz_linux&lt;/h2&gt;
+
+&lt;p&gt;Using the built in OSSEC agentless scripts are great, but sometimes
+we need more focused scanning and checking. So let&amp;rsquo;s modify the
+&lt;code&gt;ssh_integrity_check_linux&lt;/code&gt; for our environment.&lt;/p&gt;
+
+&lt;p&gt;The goals for this new script will be to watch for changes to files
+based on the following criteria:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;All setuid and setgid files&lt;/li&gt;
+&lt;li&gt;All files related to authentication (including .htaccess and ssh files)&lt;/li&gt;
+&lt;li&gt;All application specific files (apache, ssh)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&#34;finding_setuid_setgid:7ec6254becbb3beb032261b324a91668&#34;&gt;Finding all setuid and setgid files&lt;/h4&gt;
+
+&lt;p&gt;Let&amp;rsquo;s first start by identifying a method to locate all files with
+their setuid or setgid bits enabled. To do this we will ssh to the host
+&lt;code&gt;172.17.20.20&lt;/code&gt; and use &lt;code&gt;find&lt;/code&gt; to locate the files.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# sudo -u ossec ssh root@172.17.20.20
+[linux26 ~]# find / -type f \( -perm -4000 -o -perm -2000 \) 
+/sbin/umount.nfs
+/sbin/netreport
+/sbin/unix_chkpwd
+/sbin/mount.nfs
+/sbin/pam_timestamp_check
+/sbin/mount.nfs4
+/sbin/umount.nfs4
+/bin/ping6
+/bin/su
+/bin/umount
+/bin/ping
+/bin/mount
+/lib/dbus-1/dbus-daemon-launch-helper
+/usr/libexec/openssh/ssh-keysign
+/usr/libexec/utempter/utempter
+/usr/sbin/usernetctl
+/usr/sbin/postqueue
+/usr/sbin/userhelper
+/usr/sbin/userisdnctl
+/usr/sbin/postdrop
+/usr/sbin/suexec
+/usr/bin/chsh
+/usr/bin/chfn
+/usr/bin/sudo
+/usr/bin/locate
+/usr/bin/wall
+/usr/bin/sudoedit
+/usr/bin/gpasswd
+/usr/bin/lockfile
+/usr/bin/newgrp
+/usr/bin/write
+/usr/bin/screen
+/usr/bin/passwd
+/usr/bin/chage
+/usr/bin/sperl5.8.8
+/usr/bin/crontab
+/usr/bin/ssh-agent
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;finding_app_files:7ec6254becbb3beb032261b324a91668&#34;&gt;Finding all files related to authentication and applications specific files&lt;/h4&gt;
+
+&lt;p&gt;Finding all files with setuid and setgid was simple, but finding all
+files related to authentication is more invloved. This of course will
+vary from system to system, but this should be good starting point.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# sudo -u ossec ssh root@172.17.20.20
+[linux26 ~]# find / \( -name &amp;quot;.ssh&amp;quot; -o -name &amp;quot;ssh&amp;quot; -o -name &amp;quot;sshd&amp;quot; -o -name &amp;quot;httpd&amp;quot; -o -name &amp;quot;.htaccess&amp;quot; 
+-o -name &amp;quot;pam.d&amp;quot; \) -exec find {} \;
+/var/www/html/admin/modules/framework/var/www/html/admin/modules/.htaccess
+/etc/httpd
+/etc/httpd/conf
+/etc/httpd/conf.d
+/etc/httpd/conf.d/php.conf
+/etc/httpd/conf.d/proxy_ajp.conf
+/etc/httpd/conf.d/README
+/etc/httpd/conf.d/ssl.conf
+/etc/httpd/conf.d/welcome.conf
+/etc/httpd/conf/httpd.conf
+/etc/httpd/conf/magic
+/etc/httpd/logs
+/etc/httpd/modules
+/etc/httpd/run
+/etc/logrotate.d/httpd
+/etc/pam.d
+/etc/pam.d/authconfig
+[...................SNIP PAM Files.....................]
+/etc/pam.d/system-config-network-cmd
+/etc/pam.d/vsftpd
+/etc/rc.d/init.d/httpd
+/etc/rc.d/init.d/sshd
+/etc/ssh
+/etc/ssh/ssh_config
+/etc/ssh/sshd_config
+/etc/ssh/ssh_host_dsa_key
+/etc/ssh/ssh_host_dsa_key.pub
+/etc/ssh/ssh_host_key
+/etc/ssh/ssh_host_key.pub
+/etc/ssh/ssh_host_rsa_key
+/etc/ssh/ssh_host_rsa_key.pub
+/etc/sysconfig/httpd
+/root/.ssh
+/root/.ssh/authorized_keys
+/usr/bin/ssh
+/usr/lib/httpd
+/usr/lib/httpd/modules
+/usr/lib/httpd/modules/libphp5.so
+[...................SNIP Apache modules................]
+
+/usr/lib/httpd/modules/mod_vhost_alias.so
+/usr/sbin/httpd
+/usr/sbin/sshd
+/usr/src/tbm-pbxconfig-5.5.1/amp_conf/htdocs/admin/modules/framework/htdocs/admin/modules/.htaccess
+/usr/src/tbm-pbxconfig-5.5.1/amp_conf/htdocs/admin/modules/.htaccess
+/var/empty/sshd
+/var/empty/sshd/etc
+/var/empty/sshd/etc/localtime
+/var/www/html/admin/modules/framework/var/www/html/admin/modules/.htaccess
+/var/www/html/admin/modules/.htaccess
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;merging_finds:7ec6254becbb3beb032261b324a91668&#34;&gt;Merging finds&lt;/h4&gt;
+
+&lt;p&gt;Now we have two basic &lt;code&gt;find&lt;/code&gt; methods that identify the files we want to
+monitor for changes, but our finds were a little greedy so we should
+create a way to strip out unwanted files from the list. As this is a
+unix system &lt;code&gt;egrep&lt;/code&gt; is the king for finding or removing items from a
+list. To simplify things we can use &lt;code&gt;egrep&lt;/code&gt; with the &lt;code&gt;-v&lt;/code&gt; command line
+argument which tells &lt;code&gt;egrep&lt;/code&gt; &lt;strong&gt;NOT&lt;/strong&gt; to print any matching items.&lt;/p&gt;
+
+&lt;p&gt;Just to make sure that we do not end up double processing files we
+can make use of the &lt;code&gt;sort&lt;/code&gt; command with &lt;code&gt;-u&lt;/code&gt; argument to remove any
+duplicates.&lt;/p&gt;
+
+&lt;p&gt;Here is how we would put together both &lt;code&gt;find&lt;/code&gt;s, &lt;code&gt;egrep&lt;/code&gt;, and &lt;code&gt;sort&lt;/code&gt; to
+locate and filter what is needed.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;(find / -type f \( -perm -4000 -o -perm -2000 \) &amp;amp;&amp;amp; \find / \( -name &amp;quot;.ssh&amp;quot; -o -name &amp;quot;ssh&amp;quot; -o -name &amp;quot;sshd&amp;quot; 
+-o -name &amp;quot;httpd&amp;quot; -o -name &amp;quot;.htaccess&amp;quot; -o -name &amp;quot;pam.d&amp;quot; \) -exec find {} \; ) 2&amp;gt;/dev/null | egrep 
+-v &amp;quot;known_hosts|moduli|var\/log|var\/lock&amp;quot; | sort -u
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The above command we have found all files and paths that we would like
+to monitor, but this still needs to be integrated into a script on the
+OSSEC server.&lt;/p&gt;
+
+&lt;h2 id=&#34;creating_ssh_dmz_linux:7ec6254becbb3beb032261b324a91668&#34;&gt;Creating ssh_dmz_linux&lt;/h2&gt;
+
+&lt;p&gt;We don&amp;rsquo;t want to make changes to &lt;code&gt;ssh_integrity_check_linux&lt;/code&gt; directly so
+we will need to make a copy.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# (cd /var/ossec/agentless &amp;amp;&amp;amp; cp ssh_integrity_check_linux ssh_dmz_linux)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Integrating our new command line into the script we must pay close
+attention to special characters that &lt;code&gt;expect&lt;/code&gt; will process. Due to this
+we will need to escape all &lt;code&gt;/&lt;/code&gt; and &lt;code&gt;&amp;quot;&lt;/code&gt; by proceeding them with &lt;code&gt;\&lt;/code&gt;. Once
+we are done escaping we just insert our new line in place of &lt;code&gt;find $args
+2&amp;gt;/dev/null&lt;/code&gt; in our new file.&lt;/p&gt;
+
+&lt;p&gt;Here is what the completed script will look like.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-expect&#34;&gt;obsd56# cat /var/ossec/agentless/ssh_dmz_linux
+ #!/usr/bin/env expect
+
+ # @(#) $Id: ssh_integrity_check_linux,v 1.11 2009/06/24 17:06:21 dcid Exp $
+ # Agentless monitoring
+ #
+ # Copyright (C) 2009 Trend Micro Inc.
+ # All rights reserved.
+ # 
+ # This program is a free software; you can redistribute it
+ # and/or modify it under the terms of the GNU General Public
+ # License (version 3) as published by the FSF - Free Software
+ # Foundation.
+
+
+ # Main script.
+source &amp;quot;agentless/main.exp&amp;quot;
+
+
+ # SSHing to the box and passing the directories to check.
+if [catch {
+    spawn ssh $hostname
+} loc_error] {
+    send_user &amp;quot;ERROR: Opening connection: $loc_error.\n&amp;quot;
+    exit 1;
+}
+
+
+source $sshsrc
+source $susrc
+
+set timeout 600
+send &amp;quot;echo \&amp;quot;INFO: Starting.\&amp;quot;; for i in `(find / \\( -name \&amp;quot;.ssh\&amp;quot; -o -name \&amp;quot;ssh\&amp;quot; -o -name \&amp;quot;sshd\&amp;quot; 
+-o -name \&amp;quot;httpd\&amp;quot; -o -name \&amp;quot;.htaccess\&amp;quot; -o -name \&amp;quot;pam.d\&amp;quot; \\) -exec find {} \\; &amp;amp;&amp;amp; find / -type f 
+\\( -perm -4000 -o -perm -2000 \\); ) 2&amp;gt;/dev/null | egrep -v \&amp;quot;known_hosts|moduli|var\\/log|var\\/lock\&amp;quot; | sort -u`;
+do tail \$i &amp;gt;/dev/null 2&amp;gt;&amp;amp;1 &amp;amp;&amp;amp; md5=`md5sum \$i | cut -d \&amp;quot; \&amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sha1sum \$i | cut -d \&amp;quot; \&amp;quot; 
+-f 1` &amp;amp;&amp;amp; echo FWD: `stat --printf \&amp;quot;%s:%a:%u:%g\&amp;quot; \$i`:\$md5:\$sha1 \$i; done; exit\r&amp;quot;
+send &amp;quot;exit\r&amp;quot;
+
+expect {
+    timeout {
+        send_user &amp;quot;ERROR: Timeout while running commands on host: $hostname .\n&amp;quot;
+        exit 1;
+    }
+    eof {
+        send_user &amp;quot;\nINFO: Finished.\n&amp;quot;
+        exit 0;
+    }
+}
+
+exit 0;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;testing_ssh_dmz_linux:7ec6254becbb3beb032261b324a91668&#34;&gt;Testing&lt;/h4&gt;
+
+&lt;p&gt;Before we add this new script to OSSEC configuration we need to test it.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# (cd /var/ossec &amp;amp;&amp;amp; sudo -u ossec ./agentless/ssh_dmz_linux root@172.17.20.20 )
+
+ERROR: ssh_integrity_check &amp;lt;hostname&amp;gt; &amp;lt;arguments&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Due to not making use of the of the &lt;code&gt;$arg&lt;/code&gt; variable in the way that
+&lt;code&gt;ssh_integrity_check_linux&lt;/code&gt; wants use too, this caused this the problem
+above. Solving this problem would require making changes to files that
+will effect other built in scripts. So a quick solution is to just pass
+anything as an argument to the script. This will have no effect on our
+script as we do not make use of the &lt;code&gt;$arg&lt;/code&gt; variable.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# (cd /var/ossec &amp;amp;&amp;amp; sudo -u ossec ./agentless/ssh_dmz_linux root@172.17.20.20 NOTUSED)
+spawn ssh root@172.17.20.20
+Last login: Wed Nov  4 13:46:32 2009 from 172.17.20.131^M
+[linux26 ~]#  
+INFO: Started.
+echo &amp;quot;INFO: Starting.&amp;quot;; for i in `(find / \( -name &amp;quot;.ssh&amp;quot; -o -name &amp;quot;ssh&amp;quot; -o -name &amp;quot;sshd&amp;quot; -o -name &amp;quot;httpd&amp;quot; 
+-o -name &amp;quot;.htaccess&amp;quot; -o -name &amp;quot;pam.d&amp;quot; \)  -exec find {} \; &amp;amp;&amp;amp; find / -type f \( -perm -4000 -o -perm -2000 
+\); ) 2&amp;gt;/dev/null | egrep -v &amp;quot;known_hosts|moduli|var\/log|var\/lock&amp;quot;`;do tail $i &amp;gt;/dev/null 2&amp;gt;&amp;amp;1 &amp;amp;&amp;amp;
+ md5=`md5s ^Mum $i | cut -d &amp;quot; &amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sha1sum $i | cut -d &amp;quot; &amp;quot; -f 1` &amp;amp;&amp;amp; echo FWD: `stat --printf 
+&amp;quot;%s:%a:%u:%g&amp;quot; $i`:$md5:$sha1 $i; done; exit
+INFO: Starting.
+FWD: 14:775:100:101:3bc0a3e92f8170084dd102eda9a474b1:25a1783a3c6bdd9745ec245ec1bfa0414ee05d23 /var/www/html/admin/modules/.htaccessmodules/.htaccess
+FWD: 3519:644:0:0:e4ca381035a34b7a852184cc0dd89baa:6e43d0b5a46ed5ba78da5c7e9dcf319b27d769e7 /var/empty/sshd/etc/localtime
+FWD: 560:644:0:0:58370830ecfa056421ad21aff9c18905:d115bb5aeefaab97c53fbbd5df84ebcb9170d796 /etc/httpd/conf.d/php.conf
+[...................SNIP.............................]
+FWD: 392:644:0:0:e92bea7e9d70a9ecdc61edd7c0a2f59a:d77b61dac010c60589b4d8a2039e3b8a5bed18b2 /etc/httpd/conf.d/README
+FWD: 70888:4711:0:0:9046bd13339e7ef22266067b633e601a:3fc41029ddb14fe4ed613f479fa9e89c944f04dd /usr/bin/sperl5.8.8
+FWD: 315416:6755:0:0:4c63a9709fb7f0f97c30aa29d204859c:c379efa658de72866b8f6de5767906ff78d127b0 /usr/bin/crontab
+FWD: 88964:2755:0:99:baf3ebef6377d6ef42858776c33621b0:62394bf57d18c3fd49adeb39a1da61661cabc3c8 /usr/bin/ssh-agent
+logout
+Connection to 172.17.20.20 closed.
+
+INFO: Finished.
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;going_live:7ec6254becbb3beb032261b324a91668&#34;&gt;Going live&lt;/h4&gt;
+
+&lt;p&gt;We have created a new OSSEC agentless script
+and I am going to enable this script using the
+&lt;a href=&#34;http://bitbucket.org/jrossi/ossec-hids-tools/&#34;&gt;ossec-hids-tools&lt;/a&gt; that
+I introduced in my last post about ossec
+(&lt;a href=&#34;https://jeremyrossi.com/archives/2009/11/ossec-agentless-to-save-the-day/&#34;&gt;OSSEC: Agentless to save the day&lt;/a&gt;). Also a
+restart of OSSEC will also be needed for the changes to take effect.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ossec-config --section agentless --add --host root@172.17.20.20 --type ssh_dmz_linux 
+--state periodic --argv &amp;quot;NOTUSED&amp;quot;
+obsd46# /var/ossec/bin/ossec-control restart                                                   (root@jcli-1:/var/ossec)
+Killing ossec-monitord .. 
+Killing ossec-logcollector .. 
+Killing ossec-remoted .. 
+Killing ossec-syscheckd .. 
+Killing ossec-analysisd .. 
+Killing ossec-maild .. 
+ossec-execd not running ..
+Killing ossec-agentlessd .. 
+OSSEC HIDS v2.2 Stopped
+Starting OSSEC HIDS v2.2 (by Trend Micro Inc.)...
+Started ossec-agentlessd...
+Started ossec-maild...
+Started ossec-execd...
+Started ossec-analysisd...
+Started ossec-logcollector...
+Started ossec-remoted...
+Started ossec-syscheckd...
+Started ossec-monitord...
+Completed.
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Ossec: Agentless to save the day</title>
+      <link>https://jeremyrossi.com/blog/2009/10/02/ossec-agentless-to-save-the-day/</link>
+      <pubDate>Fri, 02 Oct 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/10/02/ossec-agentless-to-save-the-day/</guid>
+      <description>
+
+&lt;blockquote&gt;
+&lt;p&gt;Lois, Clark Kent may seem like just a mild-mannered reporter, but
+listen, not only does he know how to treat his editor-in-chief with the
+proper respect, not only does he have a snappy, punchy prose style, but
+he is, in my forty years in this business, the fastest typist I&amp;rsquo;ve ever
+seen.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;Perry White&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Michael Starks from &lt;a href=&#34;http://www.immutablesecurity.com/&#34;&gt;Immutable Security&lt;/a&gt; published the &amp;ldquo;Week of
+OSSEC&amp;rdquo; all last week (find their links at the end of article), and it
+was a great setup of posts.&lt;/p&gt;
+
+&lt;p&gt;With all the hard work done by Michael in his &amp;ldquo;Week of OSSEC&amp;rdquo;, I figured
+I should follow up with a few posts of my own about this great tool.
+I am &lt;strong&gt;NOT&lt;/strong&gt; going to do a week of posts, but will try to get as much
+information out as I can.&lt;/p&gt;
+
+&lt;h3 id=&#34;ossec:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;OSSEC&lt;/h3&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://praetorianprefect.com/wp-content/uploads/2009/11/Screen-shot-2009-11-02-at-8.06.14-PM.png&#34; border=&#34;0&#34; alt=&#34;Screen shot 2009-11-02 at 8.06.14 PM.png&#34; width=&#34;66&#34; height=&#34;64&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;OSSEC is a Host Intrusion Detection System (HIDS) in name, but in
+reality it is far more. It&amp;rsquo;s able to look for rootkits, monitor logs
+(LIDS), and even actively respond to defined events. While all these
+features are great, the unsung hero is agentless monitoring.&lt;/p&gt;
+
+&lt;p&gt;Agentless security monitoring is really a great feature that does not
+get explored often enough, so I am going to show how to get it up and
+running and then get it monitoring remote hosts.&lt;/p&gt;
+
+&lt;h3 id=&#34;ossec-install:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Installing OSSEC&lt;/h3&gt;
+
+&lt;p&gt;This is going to be one of the fastest OSSEC install
+instructions on the internet. For full details the main
+&lt;a href=&#34;http://www.ossec.net/main/documentation/&#34;&gt;OSSEC website&lt;/a&gt; which covers this
+topic with more detail. Key things to note here is that I have installed
+it as a server. I could have installed OSSEC locally and we would have
+still been able to do whatever was needed.&lt;/p&gt;
+
+&lt;p&gt;My install log for OSSEC 2.2 is &lt;a title=&#34;install-ossec-v2.2.txt&#34; href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/10/install-ossec-v2.2.txt&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&#34;agentless-enable:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Enabling agentless&lt;/h3&gt;
+
+&lt;p&gt;To make use of agentless security monitoring, it first
+needs to be enabled. Full details also on the
+&lt;a href=&#34;http://www.ossec.net/main/manual/manual-agentless-monitoring/&#34;&gt;OSSEC webpage&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h4 id=&#34;agentless-requirements:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Agentless Requirements&lt;/h4&gt;
+
+&lt;p&gt;For most of the built-in agentless monitoring scripts, &lt;code&gt;expect&lt;/code&gt; is
+needed to function. In this example on OpenBSD 4.5, adding the &lt;code&gt;expect&lt;/code&gt;
+package is simple with &lt;code&gt;pkg_add&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# pkg_add http://openbsd.mirror.frontiernet.net/pub/OpenBSD/4.5/packages/i386/expect-5.43.0p0-no_tk.tgz
+tcl-8.4.19: complete
+expect-5.43.0p0-no_tk: complete
+--- tcl-8.4.19 -------------------
+You may wish to add /usr/local/lib/tcl8.4/man to /etc/man.conf
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;turning-on-agentless:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Turning on Agentless&lt;/h4&gt;
+
+&lt;p&gt;Now we need to enable agentless by running the following command:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# /var/ossec/bin/ossec-control enable agentless
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;adding-a-host:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Adding a host.&lt;/h4&gt;
+
+&lt;p&gt;We need to add a host to agentlessly monitor. If we were to authenticate
+using a password for host &lt;code&gt;172.17.20.20&lt;/code&gt; we would use the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# /var/ossec/agentless/register_host.sh add agentless@172.17.20.20
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;While using a password does work, the preferred method would be to use
+SSH keys to provide the access level needed. To setup that method of
+access, you first need to create ssh keys for the user &lt;code&gt;ossec&lt;/code&gt; which is
+the account the agentless scripts runs as.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# sudo -u ossec ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/var/ossec/.ssh/id_rsa):
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /var/ossec/.ssh/id_rsa.
+Your public key has been saved in /var/ossec/.ssh/id_rsa.pub.
+The key fingerprint is:
+b8:c3:47:9a:33:09:5c:eb:54:a0:82:39:a6:06:63:08 ossec@obsd45.ptnsecurity.com
+The key&#39;s randomart image is:
++--[ RSA 2048]----+
+|E     .          |
+|oo   . .         |
+|Bo. . . .        |
+|=o o . +         |
+|..  o + S        |
+|.    = *         |
+|      @ .        |
+|       =         |
+|                 |
++-----------------+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now that the SSH keys are present, we can add the host without a
+password. The special command line argument used with &lt;code&gt;register_host.sh&lt;/code&gt;
+is &lt;code&gt;NOPASS&lt;/code&gt; in all capitals, which will tell OSSEC supplied scripts to
+make use of SSH keys.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;obsd46# /var/ossec/agentless/register_host.sh add root@172.17.20.20 NOPASS
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;enabling-ssh-key-on-the-host-to-be-monitored:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Enabling SSH key on the host to be monitored.&lt;/h4&gt;
+
+&lt;p&gt;You will now need to securely get the contents of
+&lt;code&gt;/var/ossec/.ssh/id_rsa.pub&lt;/code&gt; to 172.17.20.20.&lt;/p&gt;
+
+&lt;p&gt;Using SSH and the password for a single time will make this simple. This
+will create the &lt;code&gt;/root/.ssh&lt;/code&gt; if it is not already created, but might
+throw an error as it does if the directory is already present. This is
+not a problem and can be ignored.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# cat /var/ossec/.ssh/id_rsa.pub | ssh root@172.17.20.20 &amp;quot;( mkdir /root/.ssh/;  cat - &amp;gt;&amp;gt; /root/.ssh/authorized_keys )&amp;quot;
+root@172.17.20.20&#39;s password:
+mkdir: cannot create directory `/root/.ssh/&#39;: File exists
+obsd46# ssh root@172.17.20.20 &amp;quot;cat  /root/.ssh/authorized_keys &amp;quot;
+root@172.17.20.20&#39;s password:
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAzyTBo7CqkI0TISR9S+KPS/gYY60nkD7Qe8wTTXrAEFvPNFJ
+NJJpVVKsij6zw86lvTZ6hx9ib1M+MXvt+70uF/z1hYwnYrczR2TR03Z5nwOUA9OK61nBWXVwCi9GsQs6Oeo
+mY9vkBDoKzB52+TKKSk9ZoC+HYPiT5SaiHZvMOV7kWuwF67lnYwlG5FdkRdOiXp7DcRjje4/Hixg7RLLl7o
+dEXpIakzGfalt3yQDmwvSUZhyg3OuoKimTeNiKU/jlHlmEPuDZpiQe6QhFH38EeEIZTdHsYITodl8sY+n9I
+eNMalGIHPs+bph+qcK+6cOb1RGaeGqJBFjaqPUyismz0bw== ossec@obsd45.ptnsecurity.com
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We can also verify that it worked with the following command.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# sudo -u ossec ssh root@172.17.20.20
+The authenticity of host &#39;172.17.20.20 (172.17.20.20)&#39; can&#39;t be established.
+RSA key fingerprint is 14:cd:f2:e9:c3:5b:07:28:68:75:a7:b5:88:c2:6b:77.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added &#39;172.17.20.20&#39; (RSA) to the list of known hosts.
+Last login: Tue Oct  6 12:40:05 2009 from 172.17.20.154
+[linux26.ptnsecurity.com ~]# exit
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;add-the-agentless-host-to-ossec-conf:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Add the agentless host to ossec.conf&lt;/h4&gt;
+
+&lt;p&gt;While we have setup and prepared everything to allow agentless
+security monitoring of &lt;code&gt;172.17.20.20&lt;/code&gt; we have not told ossec to
+make use of it. To simplify adding agentless to the config, we
+are going to make use of the python library and tools I created
+&lt;a href=&#34;http://bitbucket.org/jrossi/ossec-hids-tools/&#34;&gt;ossec-hids-tools&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s check to see what agentless hosts have been configured, and
+just like a good unix program, it should not output anything if nothing
+happens.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ossec-config --section agentless --show
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next, add our host to the configuration. I am using the OSSEC supplied
+script &lt;code&gt;ssh_integrity_check_linux&lt;/code&gt;. This script will login to the remote
+host and send back to the OSSEC server via stdout an MD5 and SHA1 hash
+of every single file inside the paths specified in the arguments. To
+demonstrate the output from the server, let&amp;rsquo;s test the script and review
+said output.&lt;/p&gt;
+
+&lt;p&gt;All testing of agentless scripts must be run from the directory
+&lt;code&gt;/var/ossec/&lt;/code&gt; unless you compiled a different install location.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# cd /var/ossec
+obsd46# sudo -u ossec ./agentless/ssh_integrity_check_linux root@172.17.20.20 /etc
+spawn ssh root@172.17.20.20
+Last login: Mon Nov  2 17:53:23 2009 from 172.17.20.131
+[tss-uvc-01v.ptn.local ~]#
+INFO: Started.
+t -d &amp;quot; &amp;quot; -f 1` &amp;amp;&amp;amp; echo FWD: `stat --printf &amp;quot;%s:%a:%u:%g&amp;quot; $i`:$md5:$sha1 $i; done; exit md5=`md5sum $i | cut -d &amp;quot; &amp;quot; -f 1` &amp;amp;&amp;amp; sha1=`sha1sum $i | cu
+INFO: Starting.
+FWD: 14612:644:0:0:509377d820692110c7a6cc83ef2c2da8:bf610c1fa14d84d8b3b44ec80b81788457f77420 /etc/sound/events/gtk-events-2.soundlist
+FWD: 22291:644:0:0:d6139aa9554d4997ea25ec2d56095f51:26b9ae7784943eecaeb2dcd4b2ae3a32371d61c8 /etc/sound/events/gnome-2.soundlist
+FWD: 83:644:0:0:9f87609f65b51761657c7d67881ae582:de82c03c535e9deb16aed94153883280891da2d7 /etc/modprobe.d/blacklist-firewire
+^C^C#
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;I only let the script run for a few seconds to see the output, but the
+key things to notice are the lines beginning with &amp;ldquo;INFO&amp;rdquo; or &amp;ldquo;FWD&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;Anything that starts with &amp;ldquo;&lt;code&gt;INFO&lt;/code&gt;&amp;rdquo; is logged to the
+&lt;code&gt;/var/ossec/logs/ossec.log&lt;/code&gt; file for debugging and troubleshooting, we
+will make use of this later on in this blog. The &amp;ldquo;&lt;code&gt;FWD&lt;/code&gt;&amp;rdquo; tag at the
+beginning of the line lets the OSSEC server store the HASH information.
+Where this becomes useful is when a file&amp;rsquo;s contents change, the HASH
+will in turn change and OSSEC is able to notify you when this happens.&lt;/p&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s complete adding our host to the OSSEC configuration.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ossec-config --section agentless --add --host root@172.17.20.20 --type ssh_integrity_check_linux \
+--state periodic --argv &amp;quot;/bin /etc /sbin&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s verify it&amp;rsquo;s what we expect.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ossec-config --section agentless --show
+----------------------------------------
+type: ssh_integrity_check_linux
+frequency: 3600
+host: root@172.17.20.20
+state: periodic
+arguments: /bin /etc /sbin
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Time to restart the deamons for the changes to take effect.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;obsd46# /var/ossec/bin/ossec-control stop
+Killing ossec-monitord ..
+Killing ossec-logcollector ..
+ossec-remoted not running ..
+Killing ossec-syscheckd ..
+Killing ossec-analysisd ..
+Killing ossec-maild ..
+ossec-execd not running ..
+ossec-agentlessd not running ..
+OSSEC HIDS v2.2 Stopped
+obsd46# /var/ossec/bin/ossec-control start
+Starting OSSEC HIDS v2.2 (by Trend Micro Inc.)...
+Started ossec-agentlessd...
+Started ossec-maild...
+Started ossec-execd...
+Started ossec-analysisd...
+Started ossec-logcollector...
+Started ossec-remoted...
+Started ossec-syscheckd...
+Started ossec-monitord...
+Completed.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;agentless-test:22d710b97ad10f77ccd625d0dc30cfb4&#34;&gt;Testing agentless&lt;/h3&gt;
+
+&lt;p&gt;Checking the log files, we can see what the agentless security monitor
+has done so far.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# grep agentless logs/ossec.log
+2009/09/21 14:59:49 ossec-agentlessd: INFO: Started (pid: 15320).
+2009/09/21 14:59:51 ossec-agentlessd: INFO: Test passed for &#39;ssh_integrity_check_linux&#39;.
+2009/09/21 15:00:53 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Started.
+2009/09/21 15:00:53 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Starting.
+2009/09/21 15:01:34 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Finished.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we have one last thing to do to see that it&amp;rsquo;s working as expected,
+make a change to the file system on &lt;code&gt;172.17.20.20&lt;/code&gt; that the ossec will
+notice on the next run. I am going to change the root password for now.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# ssh -i /var/ossec/.ssh/id_rsa root@172.17.20.20
+Last login: Tue Oct  6 14:38:48 2009 from 172.17.20.154
+[linux26.ptnsecurity.com ~]# passwd
+Changing password for user root.
+New UNIX password:
+Retype new UNIX password:
+passwd: all authentication tokens updated successfully.
+[linux26.ptnsecurity.com ~]# exit
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Take a look at the logs for ossec-agentlessd to check the host. Again,
+we see that it completed another scan.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;obsd46# grep agentless logs/ossec.log
+2009/09/21 15:18:27 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Started.
+2009/09/21 15:18:27 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Starting.
+2009/09/21 15:18:46 ossec-syscheckd: INFO: Finished creating syscheck database (pre-scan completed).
+2009/09/21 15:19:06 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Finished.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note that we also received the following email notifying that the
+password has changed, a message that is very useful to report.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;OSSEC HIDS Notification.
+2009 Sep 21 15:19:00
+
+Received From: (ssh_integrity_check_linux) root@172.17.20.20-&amp;gt;syscheck
+Rule: 550 fired (level 7) -&amp;gt; &amp;quot;Integrity checksum changed.&amp;quot;
+Portion of the log(s):
+
+Integrity checksum changed for: &#39;/etc/shadow&#39;
+Old md5sum was: &#39;0d92e12c92f3edcf9d8876ea57c5f677&#39;
+New md5sum is : &#39;2bd51b61dea17c5682fb2c0cf4f92c63&#39;
+Old sha1sum was: &#39;2270c03a920ef8dd50e11cefdef046a8660f7a29&#39;
+New sha1sum is : &#39;d9518ea9022b10d07f81925c6d7f2abb4364b548&#39;
+
+--END OF NOTIFICATION
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;Week of OSSEC Links:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Day 1: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/25/week-of-ossec-day-1-detecting-world-writable-files/&#34;&gt;Detecting World-Writable Files&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Day 2: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/26/week-of-ossec-day-2-detecting-new-files/&#34;&gt;Detecting New Files&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Day 3: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/27/week-of-ossec-day-3-use-variables/&#34;&gt;Using Variables&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Day 4: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/28/week-of-ossec-day-4-using-groups/&#34;&gt;Using Groups&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Day 5: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/29/week-of-ossec-day-5-reusing-rule-ids/&#34;&gt;Reusing Rule IDs&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Day 6: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/30/week-of-ossec-day-6-developing-a-tuning-strategy/&#34;&gt;Developing a Tuning Strategy&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Day 7: &lt;a href=&#34;http://www.immutablesecurity.com/index.php/2009/10/31/week-of-ossec-day-7-developing-a-workflow/&#34;&gt;Developing a Workflow&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

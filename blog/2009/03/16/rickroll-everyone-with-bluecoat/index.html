@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>RickRoll Everyone with BlueCoat &middot; Jeremy Rossi</title>
+
+  
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-x.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/highlight/sunburst.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://jeremyrossi.com/touch-icon-144-precomposed.png">
+  <link href="https://jeremyrossi.com/favicon.png" rel="icon">
+
+  
+  
+  
+  
+
+  <meta name="description" content="The [Bluecoat SGOS](http://www.bluecoat.com/products/sg) can do a fair amount 
+of stuff just like any web-proxy should, but my favorite is to 
+[RickRoll](http://en.wikipedia.org/wiki/Rickrolling) the whole 
+company.  ( _People spend to much time on youtube as is_ ).
+">
+  <meta name="keywords" content="your,default,page,keywords">
+  
+</head>
+<body>
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      
+         
+      <a href="/"><img src="https://www.gravatar.com/avatar/b951587bdce7fa14e7f213ee6b2ed7aa?s=200"
+                       alt="gravatar" title="Jeremy Rossi"></a>
+      
+      <h1><a href="/">Jeremy Rossi</a></h1>
+      <p class="lead">haphazard writing, but just might work</p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/">Blog posts</a></li>
+      
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/about/">About Me</a></li>
+      
+    </ul>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item">
+      <a href="https://github.com/jrossi"><i class="fa fa-github-square fa-3x"></i></a>
+      
+      
+      <a href="https://www.linkedin.com/in/rossij"><i class="fa fa-linkedin-square fa-3x"></i></a>
+      
+      
+      <a href="https://twitter.com/jrossi"><i class="fa fa-twitter-square fa-3x"></i></a>
+      
+      
+      </li>
+    </ul>
+
+    
+
+    <p>Copyright &copy; 2016 <a href="https://jeremyrossi.com/license/">License</a><br/>
+       Powered by <a href="http://gohugo.io">Hugo</a> and <a href="https://github.com/zyro/hyde-x">Hyde-X</a></p>
+  </div>
+</div>
+
+
+<div class="content container">
+  <div class="post">
+    <h1>RickRoll Everyone with BlueCoat</h1>
+    <span class="post-date">Mar 16, 2009 &middot; 2 minute read
+    
+    <br/>
+    <a class="label" href="https://jeremyrossi.com/categories/networking">networking</a>
+    </span>
+    
+
+<h3 id="bluecoat-proxy:691bb6c52833216ab2a99f88295d4f41">BlueCoat Proxy</h3>
+
+<p>The <a href="http://www.bluecoat.com/products/sg">Bluecoat SGOS</a> can do a fair amount
+of stuff just like any web-proxy should, but my favorite is to
+<a href="http://en.wikipedia.org/wiki/Rickrolling">RickRoll</a> the whole
+company.  ( <em>People spend to much time on youtube as is</em> ).</p>
+
+<p>In this example users are authenticated with NTML back ended by Windows
+Active Directory. See the docs from Bluecoat on how to set this up.</p>
+
+<h4 id="definitions-conditions:691bb6c52833216ab2a99f88295d4f41">Definitions Conditions</h4>
+
+<p>Conditions allow you to control when things should happen. They do
+nothing by themselves, but get put together later to preform some real
+fun.</p>
+
+<p>The first definition here matches only member of the group
+<code>DOMAINpxy_rickrolld</code>. You could make this users or just about that
+think you would like. I choice the group method to make it simple to add
+and remove effected users.</p>
+
+<pre><code class="language-bash">define condition group_to_be_rickrolled realm=active_directory
+  group=DOMAIN\pxy_rickrolld end
+</code></pre>
+
+<p>The second definition just matches does a REGEX to match the domain
+&ldquo;<code>youtube</code>&rdquo; and looks for the string &ldquo;<code>watch</code>&rdquo; in the url path. The use
+of REGEX really is not the best way to do this, but I figured showing
+both methods of matching was worth the slight performance hit.</p>
+
+<pre><code class="language-bash">define condition match_url_to_rickroll
+    url.host.regex=&quot;youtube&quot; url.path.substring=watch 
+end
+</code></pre>
+
+<h4 id="definitions-actions:691bb6c52833216ab2a99f88295d4f41">Definitions Actions</h4>
+
+<p>Actions are define something to do with a request. In this case
+we are going to rewrite the request and change the video to the
+&ldquo;<code>oHg5SJYRHA0</code>&rdquo;.</p>
+
+<pre><code class="language-bash">define action youtube_change_to_rickroll
+    rewrite( url, &quot;(http://.*/watch?v=)([^&amp;]+)(.*)&quot;, &quot;$(1)oHg5SJYRHA0$(3)&quot; )
+end
+</code></pre>
+
+<p>Given the initial url of &ldquo;<code>http://www.youtube.com/watch?v=OBghD0XBN5M&amp;feature=related</code>&rdquo;.</p>
+
+<p>The rewrite functions second argument is a REGEX that stores the following:</p>
+
+<ul>
+<li>&ldquo;<code>http://www.youtube.com/watch?v=</code>&rdquo; in variable &ldquo;<code>$(1)</code>&rdquo;.</li>
+<li>&ldquo;<code>&amp;feature=related</code>&rdquo; in variable &ldquo;<code>$(3)</code>&rdquo;.<br /></li>
+</ul>
+
+<p>The third argument is the Newly created url that simply puts the data
+back together with our selected Video ID.</p>
+
+<h4 id="proxy-section:691bb6c52833216ab2a99f88295d4f41">Proxy Section</h4>
+
+<p>Now that you have everything defined you need to put it all to use.</p>
+
+<pre><code class="language-bash">&lt;Proxy&gt; 
+    condition=match_url_to_rickroll condition=group_to_be_rickrolled 
+action.youtube_change_to_rickroll(yes) 
+</code></pre>
+
+<p>This will pull all the define from above to select when to preform the
+rewrite function. Putting this in place is fun, but it really does make
+people mad for some reason.</p>
+
+<h3 id="completed-fun:691bb6c52833216ab2a99f88295d4f41">Completed Fun</h3>
+
+<pre><code>define condition group_to_be_rickrolled
+    realm=active_directory group=DOMAIN\pxy_rickrolld 
+end
+define condition match_url_to_rickroll
+    url.host.regex=&quot;youtube&quot; url.path.substring=watch 
+end	
+define action youtube_change_to_rickroll
+    rewrite( url, &quot;(http://.*/watch?v=)([^&amp;]+)(.*)&quot;, &quot;$(1)oHg5SJYRHA0$(3)&quot; )
+end
+
+&lt;Proxy&gt; 
+    condition=match_url_to_rickroll condition=group_to_be_rickrolled action.youtube_change_to_rickroll(yes) 
+</code></pre>
+
+<h3 id="results:691bb6c52833216ab2a99f88295d4f41">Results</h3>
+
+<p>Well of course it had to be done.</p>
+
+<p><object width="425" height="344"><param name="movie" value="http://www.youtube.com/v/oHg5SJYRHA0&hl=en&fs=1"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/oHg5SJYRHA0&hl=en&fs=1" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="425" height="344"></embed></object></p>
+
+  </div>
+  
+</div>
+
+
+
+
+<script src="https://jeremyrossi.com/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+</html>
+

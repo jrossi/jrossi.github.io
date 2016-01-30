@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>Ossec: Agentless....it&#39;s good, but not good enough.  &middot; Jeremy Rossi</title>
+
+  
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-x.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/highlight/sunburst.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://jeremyrossi.com/touch-icon-144-precomposed.png">
+  <link href="https://jeremyrossi.com/favicon.png" rel="icon">
+
+  
+  
+  
+  
+
+  <meta name="description" content="Your default page description">
+  <meta name="keywords" content="your,default,page,keywords">
+  
+</head>
+<body>
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      
+         
+      <a href="/"><img src="https://www.gravatar.com/avatar/b951587bdce7fa14e7f213ee6b2ed7aa?s=200"
+                       alt="gravatar" title="Jeremy Rossi"></a>
+      
+      <h1><a href="/">Jeremy Rossi</a></h1>
+      <p class="lead">haphazard writing, but just might work</p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/">Blog posts</a></li>
+      
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/about/">About Me</a></li>
+      
+    </ul>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item">
+      <a href="https://github.com/jrossi"><i class="fa fa-github-square fa-3x"></i></a>
+      
+      
+      <a href="https://www.linkedin.com/in/rossij"><i class="fa fa-linkedin-square fa-3x"></i></a>
+      
+      
+      <a href="https://twitter.com/jrossi"><i class="fa fa-twitter-square fa-3x"></i></a>
+      
+      
+      </li>
+    </ul>
+
+    
+
+    <p>Copyright &copy; 2016 <a href="https://jeremyrossi.com/license/">License</a><br/>
+       Powered by <a href="http://gohugo.io">Hugo</a> and <a href="https://github.com/zyro/hyde-x">Hyde-X</a></p>
+  </div>
+</div>
+
+
+<div class="content container">
+  <div class="post">
+    <h1>Ossec: Agentless....it&#39;s good, but not good enough. </h1>
+    <span class="post-date">Oct 5, 2009 &middot; 8 minute read
+    
+    <br/>
+    <a class="label" href="https://jeremyrossi.com/categories/ossec">ossec</a><a class="label" href="https://jeremyrossi.com/categories/programming">programming</a>
+    </span>
+    
+
+<div class="wp-caption" style="float: right;margin: 5px;margin-left: 42px;margin-right: 21px;"><img src="http://praetorianprefect.com/wp-content/uploads/2009/11/Screen-shot-2009-11-02-at-8.06.14-PM.png" border="1" alt="ossec_logo" width="66" height="64" /></div>
+
+<p>In working with OSSEC agentless for some time now I have come across
+some limitations in the implementation that I felt needed to be
+addressed. As OSSEC agentless is designed to preform <code>syscheck</code>
+functions on remote hosts, more general features are hard (if not
+impossible) to write into a script.</p>
+
+<p>Currently in OSSEC, agentless scripts are limited to the following commands:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td><code>INFO:</code></td>
+<td>The string following INFO will be logged to <code>/var/ossec/logs/ossec.log</code> by OSSEC for debugging.</td>
+</tr>
+
+<tr>
+<td><code>ERROR:</code></td>
+<td>Error needs to be reported.  The string following this command is forwarded to the OSSEC manager, and the OSSEC process closes down the script.</td>
+</tr>
+
+<tr>
+<td><code>STORE:</code></td>
+<td>All the lines that follow this command will be added, stored, and compared to previous runs of the script.</td>
+</tr>
+
+<tr>
+<td><code>FWD:</code></td>
+<td>The string following FWD is a colon delimited list of stats on a given file.  Example: <code>FWD: &lt;size&gt;:&lt;permissions&gt;:&lt;uid&gt;:&lt;gid&gt;:&lt;md5&gt;:&lt;sha1&gt; &lt;path &amp; file&gt;</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>Given the choices listed here more advanced agentless scripts are just
+not reasonably possible. I require the ability to pass more information
+to the OSSEC agentless process and have it raise alerts based on this
+information.</p>
+
+<h3 id="solution-patch-ossec:cb8e1494328cb9e13d88df53d8999d2b">Solution patch OSSEC</h3>
+
+<p>So I starting digging into the OSSEC code. I am not a C coder, I don&rsquo;t
+even play one on TV, but the OSSEC&rsquo;s code is clear and has just enough
+comments to allow me to understand how things function. Once I saw where
+the communication happens between ossec-agentless and it&rsquo;s subprocess I
+was quickly able to add a new OSSEC Agentless Command.</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td><code>LOG:</code></td>
+<td>The string following LOG: will be passed into <code>ossec-analysisd</code> and processed like all other log messages.</td>
+</tr>
+</tbody>
+</table>
+
+<p>This simple command allow scripts to generate messages that will get
+processed by the standard OSSEC decoders and rules.</p>
+
+<ul>
+<li>Direct download of patch: <a href="http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt" title="agentless.patch.txt">agentless.patch.txt</a></li>
+</ul>
+
+<h3 id="patching-ossec:cb8e1494328cb9e13d88df53d8999d2b">Patching OSSEC</h3>
+
+<p>The patch I created works with the current code release of OSSEC. To
+apply the patch, first download OSSEC version 2.2 from the website. In
+the instructions below, I have changed to the tmp directory first as we
+will be removing the source files once we have finished the install.</p>
+
+<pre><code class="language-bash">obsd46# cd /tmp 
+obsd46# ftp http://www.ossec.net/files/ossec-hids-2.2.tar.gz
+Trying 75.126.165.213...
+Requesting http://www.ossec.net/files/ossec-hids-2.2.tar.gz
+100% |******************************************************************|   692 KB    00:03    
+Successfully retrieved file.
+</code></pre>
+
+<p>Now expand the downloaded archive and change into the newly created
+directory <code>ossec-hids-2.2</code>.</p>
+
+<pre><code class="language-bash">obsd46# tar xfz ossec-hids-2.2.tar.gz                                                                                                                                                   
+obsd46# cd ossec-hids-2.2       
+</code></pre>
+
+<p>This is where most of the work will happen, but first we need to download the patch.</p>
+
+<pre><code class="language-bash">obsd46# ftp http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt                             
+Trying 75.101.150.229...
+Requesting http://praetorianprefect.com/wp-content/uploads/2009/11/agentless.patch.txt
+100% |******************************************************************| 10278       00:00    
+Successfully retrieved file.
+</code></pre>
+
+<p>Now we just apply the patch. We will use the <code>patch</code> command do
+this, but using the argument <code>-p1</code> to apply the patch cleanly to all
+sub-directories.</p>
+
+<pre><code class="language-bash">obsd46# patch -p1 &lt; agentless.patch.txt  
+Hmm... this looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/decoder.xml
+ |--- a/etc/decoder.xml  Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/decoder.xml  Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/decoder.xml using Plan A...
+Hunk #1 succeeded at 70.
+Hunk #2 succeeded at 1498.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/rules/agentless_rules.xml
+ |--- /dev/null  Thu Jan 01 00:00:00 1970 +0000
+ |+++ b/etc/rules/agentless_rules.xml    Fri Nov 06 19:53:36 2009 +000 0
+ |-------------------------
+(Creating file etc/rules/agentless_rules.xml...)
+Patching file etc/rules/agentless_rules.xml using Plan A...
+Empty context always matches.
+Hunk #1 succeeded at 1.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/rules/ossec_rules.xml
+ |--- a/etc/rules/ossec_rules.xml        Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/rules/ossec_rules.xml        Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/rules/ossec_rules.xml using Plan A...
+Hunk #1 succeeded at 153.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 etc/templates/config/rules.template
+ |--- a/etc/templates/config/rules.template      Wed Nov 04 20:51:36 2009 -0500
+ |+++ b/etc/templates/config/rules.template      Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+Patching file etc/templates/config/rules.template using Plan A...
+Hunk #1 succeeded at 44.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+ |-------------------------
+ |diff -r 55072a52aaa4 -r 673c04be67e9 src/agentlessd/scripts/nmap_policy
+ |--- /dev/null  Thu Jan 01 00:00:00 1970 +0000
+ |+++ b/src/agentlessd/scripts/nmap_policy       Fri Nov 06 19:53:36 2009 +0000
+ |-------------------------
+(Creating file src/agentlessd/scripts/nmap_policy...)
+Patching file src/agentlessd/scripts/nmap_policy using Plan A...
+Empty context always matches.
+Hunk #1 succeeded at 1.
+done 
+</code></pre>
+
+<p>Now we have a completed all the OSSEC 2.2 code patches for the
+expanded agentless features. At this point you will need to
+compile and install OSSEC. For full details the main
+<a href="http://www.ossec.net/main/documentation/">OSSEC website</a> covers this topic in
+more detail. A key thing to note here is that OSSEC has to be installed
+as a server or locally.</p>
+
+<p>Please see my article on how to enable <a href="http://praetorianprefect.com/archives/2009/11/ossec-agentless-to-save-the-day/">OSSEC agentless monitoring</a>.</p>
+
+<h3 id="making-use-of-the-new-features:cb8e1494328cb9e13d88df53d8999d2b">Making use of the new features</h3>
+
+<p>Now that we have a patched and installed version of OSSEC we can take
+advantage of the newly added features. Included with the patch is a
+new Agentless OSSEC script <code>nmap_policy</code>. This script is really not
+designed for production use, rather it&rsquo;s geared to show how to use the
+new agentless features.</p>
+
+<p>Let&rsquo;s get into the details. Start by running the new script and looking
+at the output. I should note that this script uses <code>python</code> and needs at
+least version 2.5 in order to parse the xml output from <code>nmap</code>.</p>
+
+<pre><code class="language-bash">obsd45# (cd /var/ossec &amp;&amp; ./agentless -b 21,23,80 -n 172.17.20.20/32 )
+INFO: Starting
+INFO: running `nmap -p 21,23,80 -oX - 172.17.20.0/24` command
+INFO: completed `nmap -p 21,23,80 -oX - 172.17.20.0/24` command
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+LOG:alert=11 Policy violation port 23 (telnet) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.19 (00:18:8B:1E:27:A5 Dell)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.20 (00:0C:29:84:72:11 VMware)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.20 (00:0C:29:84:72:11 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.21 (00:0C:29:8D:39:E4 VMware)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.21 (00:0C:29:8D:39:E4 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.31 (00:0C:29:29:CF:35 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.32 (00:0C:29:58:5F:C1 VMware)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.57 (00:1E:0B:9D:C0:03 Hewlett Packard)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.91 (00:14:38:D8:01:DD Hewlett Packard)
+LOG:alert=11 Policy violation port 21 (ftp) is open on host 172.17.20.134 (00:1E:C2:03:2D:E8 Apple)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.202 (00:19:B9:24:7E:F2 Dell)
+LOG:alert=11 Policy violation port 80 (http) is open on host 172.17.20.203 (00:19:B9:24:7E:F2 Dell)
+INFO: Ending
+</code></pre>
+
+<p>So what this script does is run <code>nmap</code> and looks for ports that are open
+and not allowed per an internal policy. In this example I checked for
+http, telnet, and ftp, but the selection of ports is configurable with
+the <code>-b</code>/<code>--badport</code> arguments. The second argument <code>-n</code>/<code>--network</code> is
+used to specify which IP addresses to scan. The format of this option is
+very liberal, in fact any valid <code>nmap</code> network specification will work.</p>
+
+<p>Just as I specified above any string following the <code>LOG:</code> OSSEC
+agentless command will be pushed to the <code>ossec-analysisd</code> process for
+decoding and rules filtering.</p>
+
+<p>As part of the patch I have also included an updated <code>decode.xml</code> and
+a new <code>agentless_rules.xml</code> to begin the first level of processing
+of output from the scripts. Using <code>ossec-logtest</code> we can see this in
+action, but due to how <code>ossec-agentlessd</code> processes the messages we need
+to slightly modify the output for it to work with <code>ossec-logtest</code>.</p>
+
+<pre><code class="language-bash">obsd46# (cd /var/ossec &amp;&amp; ./bin/ossec-logtest )                                                                                                                                                            
+2009/11/06 20:48:28 ossec-testrule: INFO: Started (pid: 9789).
+ossec-testrule: Type one log per line.
+
+Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)
+
+
+**Phase 1: Completed pre-decoding.
+       full event: 'Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)'
+       hostname: 'a'
+       program_name: '(null)'
+       log: 'Agentless: Log:alert=11 Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)'
+
+**Phase 2: Completed decoding.
+       decoder: 'agentless'
+       id: '11'
+       extra_data: 'Policy violation port 80 (http) is open on host 172.17.20.1 (00:0E:83:A9:E6:80 Cisco Systems)'
+
+**Phase 3: Completed filtering (rules).
+       Rule id: '10011'
+       Level: '11'
+       Description: 'Agentless.'
+**Alert to be generated.
+</code></pre>
+
+<p>You can see from the output that a level 11 alert would be generated
+for the line we just tested with <code>ossec-logtest</code>. In the case of the
+full output of the <code>nmap_policy</code> script it has 13 <code>LOG:</code> lines returned
+and would have generated 13 alerts. Needless to say this is a lot of
+alerts, so it&rsquo;s up to you to tune and configure this correctly for your
+environment.</p>
+
+<p>In our lab here at <a href="http://www.praetoriansecuritygroup.com">Praetorian</a>
+we don&rsquo;t ever want to see the telnet port open. So lets make this script
+live, but only checking for telnet. I am going to once again make use of
+<a href="http://bitbucket.org/jrossi/ossec-hids-tools/">ossec-hids-tools</a> to add
+the new agentless monitoring. As is always the case a restart of OSSEC
+will be needed.</p>
+
+<pre><code class="language-bash">obsd46# ossec-config --section agentless --add --host jrossi@172.17.20.0 --type nmap_policy 
+--frequency 86400 --state periodic --argv &quot;-p 23 -n 172.17.20.0/24&quot;
+obsd46# (cd /var/ossec &amp;&amp; ./bin/ossec-control restart )
+</code></pre>
+
+<p>While adding this new agentless script I had to specify a <code>--host</code>
+argument. This is required for OSSEC agentless as the host field is
+<strong>NOT</strong> optional. In the case of the script <code>nmap_policy</code> it will have
+no effect, but this needs to be taken into account when writing your own
+scripts as the first argument passed will always be what you specified
+as the host.</p>
+
+  </div>
+  
+</div>
+
+
+
+
+<script src="https://jeremyrossi.com/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+</html>
+

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>Moving To Hugo and Github &middot; Jeremy Rossi</title>
+
+  
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-x.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/highlight/sunburst.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://jeremyrossi.com/touch-icon-144-precomposed.png">
+  <link href="https://jeremyrossi.com/favicon.png" rel="icon">
+
+  
+  
+  
+  
+
+  <meta name="description" content="Overview of my moving to to github and cloudflare from my old setup. 
+">
+  <meta name="keywords" content="your,default,page,keywords">
+  
+</head>
+<body>
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      
+         
+      <a href="/"><img src="https://www.gravatar.com/avatar/b951587bdce7fa14e7f213ee6b2ed7aa?s=200"
+                       alt="gravatar" title="Jeremy Rossi"></a>
+      
+      <h1><a href="/">Jeremy Rossi</a></h1>
+      <p class="lead">haphazard writing, but just might work</p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/">Blog posts</a></li>
+      
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/about/">About Me</a></li>
+      
+    </ul>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item">
+      <a href="https://github.com/jrossi"><i class="fa fa-github-square fa-3x"></i></a>
+      
+      
+      <a href="https://www.linkedin.com/in/rossij"><i class="fa fa-linkedin-square fa-3x"></i></a>
+      
+      
+      <a href="https://twitter.com/jrossi"><i class="fa fa-twitter-square fa-3x"></i></a>
+      
+      
+      </li>
+    </ul>
+
+    
+
+    <p>Copyright &copy; 2016 <a href="https://jeremyrossi.com/license/">License</a><br/>
+       Powered by <a href="http://gohugo.io">Hugo</a> and <a href="https://github.com/zyro/hyde-x">Hyde-X</a></p>
+  </div>
+</div>
+
+
+<div class="content container">
+  <div class="post">
+    <h1>Moving To Hugo and Github</h1>
+    <span class="post-date">Dec 31, 2015 &middot; 3 minute read
+    
+    <br/>
+    <a class="label" href="https://jeremyrossi.com/categories/site">site</a>
+    </span>
+    
+
+<p>Not a single person will care and I really don&rsquo;t myself, but I don&rsquo;t
+want to run my own server anymore just to keep this old blog online.
+This is just a post on what I did to move.</p>
+
+<h3 id="hugo:84ab847c27f6bdccc47e2dafe602b6bf">Hugo</h3>
+
+<p>This was the simple part used homebrew install and follow the
+<a href="https://gohugo.io/overview/quickstart/" title="Hugo Quickstart">docs</a>.</p>
+
+<p>Porting over some of the markdown tables required some changes as things were
+different.  This was minor:</p>
+
+<pre><code class="language-markdown">| title     | title          |
+| --------- | ---------------|
+| Value     | Value          |
+</code></pre>
+
+<p>Need to be changed to:</p>
+
+<pre><code>title    | title         
+---------|---------------
+Value    | Value         
+</code></pre>
+
+<p>Other wise everything was simple.</p>
+
+<h3 id="wercker-github-pages:84ab847c27f6bdccc47e2dafe602b6bf">Wercker &amp; Github pages</h3>
+
+<p>The <a href="https://gohugo.io/tutorials/automated-deployments/" title="Hugo Automated Deployments">hugo docs on deploying</a> is simple and would work, but they do
+not work with Github organization pages. Here is how you can make it that work.</p>
+
+<p>I checked to make this work and should have used ssh keys as they can be locked
+done to a single repo, but I just used a user level token for pushing the
+content back into github.</p>
+
+<p>This is the wercker.yml file I used.</p>
+
+<pre><code class="language-yaml">box: golang:1.5.1
+build:
+  steps:
+    - arjen/hugo-build:
+      version: &quot;0.15&quot;
+
+deploy:
+  steps:
+    - lukevivier/gh-pages:
+        token: $GH_TOKEN
+        domain: jeremyrossi.com
+        basedir: public
+        repo: jrossi/jrossi.github.io
+</code></pre>
+
+<p>The gh-pages step is documented <a href="https://github.com/lvivier/step-gh-pages" title="step gh pages">here</a>, and works but you have to
+read the code to know that if that when the user/org name match the repo name
+it will not push the content into gh-pages git branch, but rather into
+master git branch. Prefect just what I needed.</p>
+
+<h3 id="dns-cloudflare:84ab847c27f6bdccc47e2dafe602b6bf">DNS / Cloudflare</h3>
+
+<p>I had been using dyn.com for years (well my dnssimple account) and I always
+hated them trying to up sell me to enterprise features I don&rsquo;t need (<em>sure they
+are great feature just not something a blog site needs</em>). Anywho; I moved my
+DNS to cloudflare, and this process is simple and
+<a href="https://support.cloudflare.com/hc/en-us/articles/205195708-Step-3-Change-your-domain-name-servers-to-CloudFlare">documented</a> better by them.</p>
+
+<p>Interface works great and they do all kinds of extra stuff, but here is the end
+state:</p>
+
+
+<figure >
+    
+        <img src="/img/move-to-hugo-dns.png" />
+    
+    
+    <figcaption>
+        <h4>Figure 1: Cloudflare DNS</h4>
+        
+    </figcaption>
+    
+</figure>
+
+
+<p>I setup the APEX (top-level domain) as required for organization pages that are
+not subdomains. I made sure to enable cloudflare for <code>192.30.252.153</code> and
+<code>192.30.252.154</code> so that I can use cloudflare rules and still get a CDN with
+DDoS protection (This not something I need but github does and I don&rsquo;t want to
+go down when they do their thing).</p>
+
+<p>Also note the CNAMES for <code>www.jeremyrossi.com</code> <code>blog.jeremyrossi.com</code> this is
+how subdomains should be setup with github pages, but I still wanted to control
+redirection so all old links would work. This is where cloudflare rules come
+in:</p>
+
+
+<figure >
+    
+        <img src="/img/move-to-hugo-rules.png" />
+    
+    
+    <figcaption>
+        <h4>Figure 2: Cloudflare Rules</h4>
+        
+    </figcaption>
+    
+</figure>
+
+
+<p>The key thing here is that cloudflare will redirect for subdomains and make
+sure the trailing path is still present. Thanks to the magic <code>$1</code>.</p>
+
+<h3 id="done:84ab847c27f6bdccc47e2dafe602b6bf">Done</h3>
+
+<p>All done moved and things are working as expected. Did have a few dead ends in
+the process, but in general was not a hard change.</p>
+
+  </div>
+  
+</div>
+
+
+
+
+<script src="https://jeremyrossi.com/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+</html>
+

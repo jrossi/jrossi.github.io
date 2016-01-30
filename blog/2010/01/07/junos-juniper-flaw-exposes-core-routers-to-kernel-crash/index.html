@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>JUNOS (Juniper) Flaw Exposes Core Routers to Kernel Crash &middot; Jeremy Rossi</title>
+
+  
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-x.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/highlight/sunburst.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://jeremyrossi.com/touch-icon-144-precomposed.png">
+  <link href="https://jeremyrossi.com/favicon.png" rel="icon">
+
+  
+  
+  
+  
+
+  <meta name="description" content="A report has been received from Juniper at 4:25pm under bulletin PSN-2010-01-623 that a 
+crafted malformed TCP field option in the TCP header of a packet will cause the JUNOS kernel 
+to core (crash). In other words the kernel on the network device (gateway router) will 
+crash and reboot if a packet containing this crafted option is received on a listening 
+TCP port. The JUNOS firewall filter is unable to filter a TCP packet with this issue. 
+Juniper claims this issue as exploit was identified during investigation of a vendor 
+interoperability issue.
+">
+  <meta name="keywords" content="your,default,page,keywords">
+  
+</head>
+<body>
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      
+         
+      <a href="/"><img src="https://www.gravatar.com/avatar/b951587bdce7fa14e7f213ee6b2ed7aa?s=200"
+                       alt="gravatar" title="Jeremy Rossi"></a>
+      
+      <h1><a href="/">Jeremy Rossi</a></h1>
+      <p class="lead">haphazard writing, but just might work</p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/">Blog posts</a></li>
+      
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/about/">About Me</a></li>
+      
+    </ul>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item">
+      <a href="https://github.com/jrossi"><i class="fa fa-github-square fa-3x"></i></a>
+      
+      
+      <a href="https://www.linkedin.com/in/rossij"><i class="fa fa-linkedin-square fa-3x"></i></a>
+      
+      
+      <a href="https://twitter.com/jrossi"><i class="fa fa-twitter-square fa-3x"></i></a>
+      
+      
+      </li>
+    </ul>
+
+    
+
+    <p>Copyright &copy; 2016 <a href="https://jeremyrossi.com/license/">License</a><br/>
+       Powered by <a href="http://gohugo.io">Hugo</a> and <a href="https://github.com/zyro/hyde-x">Hyde-X</a></p>
+  </div>
+</div>
+
+
+<div class="content container">
+  <div class="post">
+    <h1>JUNOS (Juniper) Flaw Exposes Core Routers to Kernel Crash</h1>
+    <span class="post-date">Jan 7, 2010 &middot; 4 minute read
+    
+    <br/>
+    <a class="label" href="https://jeremyrossi.com/categories/security">security</a>
+    </span>
+    
+
+<p>A report has been received from Juniper at 4:25pm under bulletin PSN-2010-01-623 that a
+crafted malformed TCP field option in the TCP header of a packet will cause the JUNOS kernel
+to core (crash). In other words the kernel on the network device (gateway router) will
+crash and reboot if a packet containing this crafted option is received on a listening
+TCP port. The JUNOS firewall filter is unable to filter a TCP packet with this issue.
+Juniper claims this issue as exploit was identified during investigation of a vendor
+interoperability issue.</p>
+
+<p>There is talk that backbone Internet providers have been quickly patching this issue
+since yesterday night.</p>
+
+<h3 id="tcp-header-option-space:9715789817c7e41c1c98f33ef9b6bb90">TCP Header Option Space</h3>
+
+<blockquote>
+<p>&ldquo;Options occupy space at the end of the TCP header. All options are included in the
+checksum. An option may begin on any byte boundary. The TCP header must be padded with
+zeros to make the header length a multiple of 32 bits.&rdquo;</p>
+
+<p>(Source: <a href="http://www.networksorcery.com/enp/protocol/tcp.htm">http://www.networksorcery.com/enp/protocol/tcp.htm</a>)</p>
+</blockquote>
+
+<p>[caption id=&ldquo;attachment_2819&rdquo; align=&ldquo;alignnone&rdquo; width=&ldquo;300&rdquo; caption=&ldquo;The TCP Header&rdquo;]<a href="http://praetorianprefect.com/wp-content/uploads/2010/01/tcp_header1.jpg"><img src="http://praetorianprefect.com/wp-content/uploads/2010/01/tcp_header1-300x124.jpg" alt="The TCP Header" title="tcp_header1" width="300" height="124" class="size-medium wp-image-2819" /></a>[/caption]
+Source: <a href="http://www.software-engineer-training.com/wp-content/uploads/2007/12/tcp_header.png">http://www.software-engineer-training.com/wp-content/uploads/2007/12/tcp_header.png</a></p>
+
+<h3 id="the-kernel:9715789817c7e41c1c98f33ef9b6bb90">The Kernel</h3>
+
+<p>At a high level, the kernel in an operating system serves as the bridge between applications
+and the actual data processing of the hardware the OS is running on. The kernel manages
+system resources and abstracts resources that applications must access.</p>
+
+<p>[caption id=&ldquo;attachment_2837&rdquo; align=&ldquo;alignnone&rdquo; width=&ldquo;300&rdquo; caption=&ldquo;Basic Kernel Representation&rdquo;]<a href="http://praetorianprefect.com/wp-content/uploads/2010/01/kernel.png"><img src="http://praetorianprefect.com/wp-content/uploads/2010/01/kernel-300x237.png" alt="Basic Kernel Representation" title="kernel" width="300" height="237" class="size-medium wp-image-2837" /></a>[/caption]</p>
+
+<h3 id="affected-devices:9715789817c7e41c1c98f33ef9b6bb90">Affected Devices</h3>
+
+<p>It is basically all of them save the more recent version. If you&rsquo;ve installed a device
+with a JUNOS release version released later then 1/28/09, this issue is already
+corrected. Apparently the original issue and its correction did not conceive of this
+problem as a security vulnerability, and thus the criticality of applying the patch
+was not initially understood until this week.</p>
+
+<ul>
+<li>JUNOS 10.x  (Removed from the bulletin today, 01/07/09, so assumed to not be affected)</li>
+<li>JUNOS 9.x</li>
+<li>JUNOS 7.x</li>
+<li>JUNOS 8.x</li>
+</ul>
+
+<p>Please note the versions below were removed from the bulletin today, 01/07/09. This
+is likely because, as Matt pointed out below, these
+<a href="http://www.juniper.net/support/eol/junos.html">are end of life versions</a> of the
+OS (meaning likely still vulnerable if you happen to be running them, but out of
+scope for Juniper because from their standpoint these should already have been
+upgraded).</p>
+
+<ul>
+<li>JUNOS 6.x</li>
+<li>JUNOS 5.x</li>
+<li>JUNOS 3.x</li>
+<li>JUNOS 4.x</li>
+</ul>
+
+<h3 id="juniper-s-advice:9715789817c7e41c1c98f33ef9b6bb90">Juniper&rsquo;s Advice</h3>
+
+<p>Juniper references best common practice (BCP) 38, a methodology for reducing the amount
+of bad packets being forwarded by network devices (basically prohibiting packets where
+the originator can&rsquo;t effectively be identified), as a possible mitigating control.</p>
+
+<p>However there is no completely effective workaround available other then upgrading the OS.</p>
+
+<h3 id="update:9715789817c7e41c1c98f33ef9b6bb90">Update</h3>
+
+<p>Juniper responded to <a href="http://www.theregister.co.uk/2010/01/07/juniper_critical_router_bug/">the Register</a>
+as follows:</p>
+
+<blockquote>
+<p>&ldquo;that the bulletin was one of seven security advisories the company issued
+under a policy designed to prevent members of the public at large from getting details
+of the vulnerabilities.&rdquo;</p>
+
+<p>&ldquo;Because of Juniper&rsquo;s &lsquo;Entitled Disclosure Policy,&rsquo; only our customers and partners
+are allowed access to the details of the Security Advisory,&rdquo;</p>
+
+<ul>
+<li>Juniper spokeswoman</li>
+</ul>
+</blockquote>
+
+<p>Interesting approach, and probably would be better received if vulnerabilities only
+affected those entitled. Unfortunately the networks that run high end Juniper equipment
+serve a great many end users, and thus in this case the general public would probably
+like some informed background. At the point the media is contacting you, it is safe to
+say the &ldquo;cat is out of the bag&rdquo;. And this is the response from a company that is a
+strong player in the information security appliance space?</p>
+
+<p>The flip side is that the Juniper response to this issue from a technical perspective
+has appeared to be at first glance fairly comprehensive, a PR opportunity if managed
+correctly.</p>
+
+<p>And yes, this is the same firm that feels <a href="http://www.theregister.co.uk/2009/06/30/atm_talk_canceled/">this way</a>
+when it is they who are discussing the vulnerability of someone else&rsquo;s product:</p>
+
+<blockquote>
+<p>Juniper believes that Jack&rsquo;s research (on ATM vulnerabilities) is important to be
+presented in a public forum in order to advance the state of security,</p>
+</blockquote>
+
+<p>We agree with the second Juniper: more education, especially after the problem
+has been corrected, is better.</p>
+
+<h3 id="finally:9715789817c7e41c1c98f33ef9b6bb90">Finally</h3>
+
+<p>More information will be posted as it becomes available. This was a serious issue
+which appears to have been averted through a coordinated response. Essentially, given
+the core equipment (big Telco routers) running &ldquo;Big Iron&rdquo; type Juniper network
+devices, portions of the Internet could have gone black with a successful implementation
+of this exploit. Routers at this level are not patched like your local Windows OS,
+it takes something important to justify an outage. As previously noted, even though
+the code problem itself was identified last year, it appears that the problem was
+not identified as a mechanism for creating a remote exploit until now, raising the
+criticality of patching the issue severely.</p>
+
+  </div>
+  
+</div>
+
+
+
+
+<script src="https://jeremyrossi.com/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+</html>
+

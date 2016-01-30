@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Site on Jeremy Rossi</title>
+    <link>https://jeremyrossi.com/categories/site/</link>
+    <description>Recent content in Site on Jeremy Rossi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 31 Dec 2015 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://jeremyrossi.com/categories/site/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Moving To Hugo and Github</title>
+      <link>https://jeremyrossi.com/blog/2015/12/31/moving-to-hugo-and-github/</link>
+      <pubDate>Thu, 31 Dec 2015 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2015/12/31/moving-to-hugo-and-github/</guid>
+      <description>
+
+&lt;p&gt;Not a single person will care and I really don&amp;rsquo;t myself, but I don&amp;rsquo;t
+want to run my own server anymore just to keep this old blog online.
+This is just a post on what I did to move.&lt;/p&gt;
+
+&lt;h3 id=&#34;hugo:84ab847c27f6bdccc47e2dafe602b6bf&#34;&gt;Hugo&lt;/h3&gt;
+
+&lt;p&gt;This was the simple part used homebrew install and follow the
+&lt;a href=&#34;https://gohugo.io/overview/quickstart/&#34; title=&#34;Hugo Quickstart&#34;&gt;docs&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Porting over some of the markdown tables required some changes as things were
+different.  This was minor:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-markdown&#34;&gt;| title     | title          |
+| --------- | ---------------|
+| Value     | Value          |
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Need to be changed to:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;title    | title         
+---------|---------------
+Value    | Value         
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Other wise everything was simple.&lt;/p&gt;
+
+&lt;h3 id=&#34;wercker-github-pages:84ab847c27f6bdccc47e2dafe602b6bf&#34;&gt;Wercker &amp;amp; Github pages&lt;/h3&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://gohugo.io/tutorials/automated-deployments/&#34; title=&#34;Hugo Automated Deployments&#34;&gt;hugo docs on deploying&lt;/a&gt; is simple and would work, but they do
+not work with Github organization pages. Here is how you can make it that work.&lt;/p&gt;
+
+&lt;p&gt;I checked to make this work and should have used ssh keys as they can be locked
+done to a single repo, but I just used a user level token for pushing the
+content back into github.&lt;/p&gt;
+
+&lt;p&gt;This is the wercker.yml file I used.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;box: golang:1.5.1
+build:
+  steps:
+    - arjen/hugo-build:
+      version: &amp;quot;0.15&amp;quot;
+
+deploy:
+  steps:
+    - lukevivier/gh-pages:
+        token: $GH_TOKEN
+        domain: jeremyrossi.com
+        basedir: public
+        repo: jrossi/jrossi.github.io
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The gh-pages step is documented &lt;a href=&#34;https://github.com/lvivier/step-gh-pages&#34; title=&#34;step gh pages&#34;&gt;here&lt;/a&gt;, and works but you have to
+read the code to know that if that when the user/org name match the repo name
+it will not push the content into gh-pages git branch, but rather into
+master git branch. Prefect just what I needed.&lt;/p&gt;
+
+&lt;h3 id=&#34;dns-cloudflare:84ab847c27f6bdccc47e2dafe602b6bf&#34;&gt;DNS / Cloudflare&lt;/h3&gt;
+
+&lt;p&gt;I had been using dyn.com for years (well my dnssimple account) and I always
+hated them trying to up sell me to enterprise features I don&amp;rsquo;t need (&lt;em&gt;sure they
+are great feature just not something a blog site needs&lt;/em&gt;). Anywho; I moved my
+DNS to cloudflare, and this process is simple and
+&lt;a href=&#34;https://support.cloudflare.com/hc/en-us/articles/205195708-Step-3-Change-your-domain-name-servers-to-CloudFlare&#34;&gt;documented&lt;/a&gt; better by them.&lt;/p&gt;
+
+&lt;p&gt;Interface works great and they do all kinds of extra stuff, but here is the end
+state:&lt;/p&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;https://jeremyrossi.com/img/move-to-hugo-dns.png&#34; /&gt;
+    
+    
+    &lt;figcaption&gt;
+        &lt;h4&gt;Figure 1: Cloudflare DNS&lt;/h4&gt;
+        
+    &lt;/figcaption&gt;
+    
+&lt;/figure&gt;
+
+
+&lt;p&gt;I setup the APEX (top-level domain) as required for organization pages that are
+not subdomains. I made sure to enable cloudflare for &lt;code&gt;192.30.252.153&lt;/code&gt; and
+&lt;code&gt;192.30.252.154&lt;/code&gt; so that I can use cloudflare rules and still get a CDN with
+DDoS protection (This not something I need but github does and I don&amp;rsquo;t want to
+go down when they do their thing).&lt;/p&gt;
+
+&lt;p&gt;Also note the CNAMES for &lt;code&gt;www.jeremyrossi.com&lt;/code&gt; &lt;code&gt;blog.jeremyrossi.com&lt;/code&gt; this is
+how subdomains should be setup with github pages, but I still wanted to control
+redirection so all old links would work. This is where cloudflare rules come
+in:&lt;/p&gt;
+
+
+&lt;figure &gt;
+    
+        &lt;img src=&#34;https://jeremyrossi.com/img/move-to-hugo-rules.png&#34; /&gt;
+    
+    
+    &lt;figcaption&gt;
+        &lt;h4&gt;Figure 2: Cloudflare Rules&lt;/h4&gt;
+        
+    &lt;/figcaption&gt;
+    
+&lt;/figure&gt;
+
+
+&lt;p&gt;The key thing here is that cloudflare will redirect for subdomains and make
+sure the trailing path is still present. Thanks to the magic &lt;code&gt;$1&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&#34;done:84ab847c27f6bdccc47e2dafe602b6bf&#34;&gt;Done&lt;/h3&gt;
+
+&lt;p&gt;All done moved and things are working as expected. Did have a few dead ends in
+the process, but in general was not a hard change.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

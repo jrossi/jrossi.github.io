@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>Ossec: Agentless to save the day &middot; Jeremy Rossi</title>
+
+  
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-x.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/highlight/sunburst.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://jeremyrossi.com/touch-icon-144-precomposed.png">
+  <link href="https://jeremyrossi.com/favicon.png" rel="icon">
+
+  
+  
+  
+  
+
+  <meta name="description" content="Your default page description">
+  <meta name="keywords" content="your,default,page,keywords">
+  
+</head>
+<body>
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      
+         
+      <a href="/"><img src="https://www.gravatar.com/avatar/b951587bdce7fa14e7f213ee6b2ed7aa?s=200"
+                       alt="gravatar" title="Jeremy Rossi"></a>
+      
+      <h1><a href="/">Jeremy Rossi</a></h1>
+      <p class="lead">haphazard writing, but just might work</p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/">Blog posts</a></li>
+      
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/about/">About Me</a></li>
+      
+    </ul>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item">
+      <a href="https://github.com/jrossi"><i class="fa fa-github-square fa-3x"></i></a>
+      
+      
+      <a href="https://www.linkedin.com/in/rossij"><i class="fa fa-linkedin-square fa-3x"></i></a>
+      
+      
+      <a href="https://twitter.com/jrossi"><i class="fa fa-twitter-square fa-3x"></i></a>
+      
+      
+      </li>
+    </ul>
+
+    
+
+    <p>Copyright &copy; 2016 <a href="https://jeremyrossi.com/license/">License</a><br/>
+       Powered by <a href="http://gohugo.io">Hugo</a> and <a href="https://github.com/zyro/hyde-x">Hyde-X</a></p>
+  </div>
+</div>
+
+
+<div class="content container">
+  <div class="post">
+    <h1>Ossec: Agentless to save the day</h1>
+    <span class="post-date">Oct 2, 2009 &middot; 8 minute read
+    
+    <br/>
+    <a class="label" href="https://jeremyrossi.com/categories/ossec">ossec</a>
+    </span>
+    
+
+<blockquote>
+<p>Lois, Clark Kent may seem like just a mild-mannered reporter, but
+listen, not only does he know how to treat his editor-in-chief with the
+proper respect, not only does he have a snappy, punchy prose style, but
+he is, in my forty years in this business, the fastest typist I&rsquo;ve ever
+seen.</p>
+
+<p><code>Perry White</code></p>
+</blockquote>
+
+<p>Michael Starks from <a href="http://www.immutablesecurity.com/">Immutable Security</a> published the &ldquo;Week of
+OSSEC&rdquo; all last week (find their links at the end of article), and it
+was a great setup of posts.</p>
+
+<p>With all the hard work done by Michael in his &ldquo;Week of OSSEC&rdquo;, I figured
+I should follow up with a few posts of my own about this great tool.
+I am <strong>NOT</strong> going to do a week of posts, but will try to get as much
+information out as I can.</p>
+
+<h3 id="ossec:22d710b97ad10f77ccd625d0dc30cfb4">OSSEC</h3>
+
+<p><img src="http://praetorianprefect.com/wp-content/uploads/2009/11/Screen-shot-2009-11-02-at-8.06.14-PM.png" border="0" alt="Screen shot 2009-11-02 at 8.06.14 PM.png" width="66" height="64" /></p>
+
+<p>OSSEC is a Host Intrusion Detection System (HIDS) in name, but in
+reality it is far more. It&rsquo;s able to look for rootkits, monitor logs
+(LIDS), and even actively respond to defined events. While all these
+features are great, the unsung hero is agentless monitoring.</p>
+
+<p>Agentless security monitoring is really a great feature that does not
+get explored often enough, so I am going to show how to get it up and
+running and then get it monitoring remote hosts.</p>
+
+<h3 id="ossec-install:22d710b97ad10f77ccd625d0dc30cfb4">Installing OSSEC</h3>
+
+<p>This is going to be one of the fastest OSSEC install
+instructions on the internet. For full details the main
+<a href="http://www.ossec.net/main/documentation/">OSSEC website</a> which covers this
+topic with more detail. Key things to note here is that I have installed
+it as a server. I could have installed OSSEC locally and we would have
+still been able to do whatever was needed.</p>
+
+<p>My install log for OSSEC 2.2 is <a title="install-ossec-v2.2.txt" href="http://praetorianprefect.com/wp-content/uploads/2009/10/install-ossec-v2.2.txt">here</a>.</p>
+
+<h3 id="agentless-enable:22d710b97ad10f77ccd625d0dc30cfb4">Enabling agentless</h3>
+
+<p>To make use of agentless security monitoring, it first
+needs to be enabled. Full details also on the
+<a href="http://www.ossec.net/main/manual/manual-agentless-monitoring/">OSSEC webpage</a>.</p>
+
+<h4 id="agentless-requirements:22d710b97ad10f77ccd625d0dc30cfb4">Agentless Requirements</h4>
+
+<p>For most of the built-in agentless monitoring scripts, <code>expect</code> is
+needed to function. In this example on OpenBSD 4.5, adding the <code>expect</code>
+package is simple with <code>pkg_add</code>.</p>
+
+<pre><code class="language-bash">obsd46# pkg_add http://openbsd.mirror.frontiernet.net/pub/OpenBSD/4.5/packages/i386/expect-5.43.0p0-no_tk.tgz
+tcl-8.4.19: complete
+expect-5.43.0p0-no_tk: complete
+--- tcl-8.4.19 -------------------
+You may wish to add /usr/local/lib/tcl8.4/man to /etc/man.conf
+</code></pre>
+
+<h4 id="turning-on-agentless:22d710b97ad10f77ccd625d0dc30cfb4">Turning on Agentless</h4>
+
+<p>Now we need to enable agentless by running the following command:</p>
+
+<pre><code class="language-bash">obsd46# /var/ossec/bin/ossec-control enable agentless
+</code></pre>
+
+<h4 id="adding-a-host:22d710b97ad10f77ccd625d0dc30cfb4">Adding a host.</h4>
+
+<p>We need to add a host to agentlessly monitor. If we were to authenticate
+using a password for host <code>172.17.20.20</code> we would use the following:</p>
+
+<pre><code class="language-bash">obsd46# /var/ossec/agentless/register_host.sh add agentless@172.17.20.20
+</code></pre>
+
+<p>While using a password does work, the preferred method would be to use
+SSH keys to provide the access level needed. To setup that method of
+access, you first need to create ssh keys for the user <code>ossec</code> which is
+the account the agentless scripts runs as.</p>
+
+<pre><code class="language-bash">obsd46# sudo -u ossec ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/var/ossec/.ssh/id_rsa):
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /var/ossec/.ssh/id_rsa.
+Your public key has been saved in /var/ossec/.ssh/id_rsa.pub.
+The key fingerprint is:
+b8:c3:47:9a:33:09:5c:eb:54:a0:82:39:a6:06:63:08 ossec@obsd45.ptnsecurity.com
+The key's randomart image is:
++--[ RSA 2048]----+
+|E     .          |
+|oo   . .         |
+|Bo. . . .        |
+|=o o . +         |
+|..  o + S        |
+|.    = *         |
+|      @ .        |
+|       =         |
+|                 |
++-----------------+
+</code></pre>
+
+<p>Now that the SSH keys are present, we can add the host without a
+password. The special command line argument used with <code>register_host.sh</code>
+is <code>NOPASS</code> in all capitals, which will tell OSSEC supplied scripts to
+make use of SSH keys.</p>
+
+<pre><code>obsd46# /var/ossec/agentless/register_host.sh add root@172.17.20.20 NOPASS
+</code></pre>
+
+<h4 id="enabling-ssh-key-on-the-host-to-be-monitored:22d710b97ad10f77ccd625d0dc30cfb4">Enabling SSH key on the host to be monitored.</h4>
+
+<p>You will now need to securely get the contents of
+<code>/var/ossec/.ssh/id_rsa.pub</code> to 172.17.20.20.</p>
+
+<p>Using SSH and the password for a single time will make this simple. This
+will create the <code>/root/.ssh</code> if it is not already created, but might
+throw an error as it does if the directory is already present. This is
+not a problem and can be ignored.</p>
+
+<pre><code class="language-bash">obsd46# cat /var/ossec/.ssh/id_rsa.pub | ssh root@172.17.20.20 &quot;( mkdir /root/.ssh/;  cat - &gt;&gt; /root/.ssh/authorized_keys )&quot;
+root@172.17.20.20's password:
+mkdir: cannot create directory `/root/.ssh/': File exists
+obsd46# ssh root@172.17.20.20 &quot;cat  /root/.ssh/authorized_keys &quot;
+root@172.17.20.20's password:
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAzyTBo7CqkI0TISR9S+KPS/gYY60nkD7Qe8wTTXrAEFvPNFJ
+NJJpVVKsij6zw86lvTZ6hx9ib1M+MXvt+70uF/z1hYwnYrczR2TR03Z5nwOUA9OK61nBWXVwCi9GsQs6Oeo
+mY9vkBDoKzB52+TKKSk9ZoC+HYPiT5SaiHZvMOV7kWuwF67lnYwlG5FdkRdOiXp7DcRjje4/Hixg7RLLl7o
+dEXpIakzGfalt3yQDmwvSUZhyg3OuoKimTeNiKU/jlHlmEPuDZpiQe6QhFH38EeEIZTdHsYITodl8sY+n9I
+eNMalGIHPs+bph+qcK+6cOb1RGaeGqJBFjaqPUyismz0bw== ossec@obsd45.ptnsecurity.com
+</code></pre>
+
+<p>We can also verify that it worked with the following command.</p>
+
+<pre><code class="language-bash">obsd46# sudo -u ossec ssh root@172.17.20.20
+The authenticity of host '172.17.20.20 (172.17.20.20)' can't be established.
+RSA key fingerprint is 14:cd:f2:e9:c3:5b:07:28:68:75:a7:b5:88:c2:6b:77.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '172.17.20.20' (RSA) to the list of known hosts.
+Last login: Tue Oct  6 12:40:05 2009 from 172.17.20.154
+[linux26.ptnsecurity.com ~]# exit
+</code></pre>
+
+<h4 id="add-the-agentless-host-to-ossec-conf:22d710b97ad10f77ccd625d0dc30cfb4">Add the agentless host to ossec.conf</h4>
+
+<p>While we have setup and prepared everything to allow agentless
+security monitoring of <code>172.17.20.20</code> we have not told ossec to
+make use of it. To simplify adding agentless to the config, we
+are going to make use of the python library and tools I created
+<a href="http://bitbucket.org/jrossi/ossec-hids-tools/">ossec-hids-tools</a>.</p>
+
+<p>First, let&rsquo;s check to see what agentless hosts have been configured, and
+just like a good unix program, it should not output anything if nothing
+happens.</p>
+
+<pre><code class="language-bash">obsd46# ossec-config --section agentless --show
+</code></pre>
+
+<p>Next, add our host to the configuration. I am using the OSSEC supplied
+script <code>ssh_integrity_check_linux</code>. This script will login to the remote
+host and send back to the OSSEC server via stdout an MD5 and SHA1 hash
+of every single file inside the paths specified in the arguments. To
+demonstrate the output from the server, let&rsquo;s test the script and review
+said output.</p>
+
+<p>All testing of agentless scripts must be run from the directory
+<code>/var/ossec/</code> unless you compiled a different install location.</p>
+
+<pre><code class="language-bash">obsd46# cd /var/ossec
+obsd46# sudo -u ossec ./agentless/ssh_integrity_check_linux root@172.17.20.20 /etc
+spawn ssh root@172.17.20.20
+Last login: Mon Nov  2 17:53:23 2009 from 172.17.20.131
+[tss-uvc-01v.ptn.local ~]#
+INFO: Started.
+t -d &quot; &quot; -f 1` &amp;&amp; echo FWD: `stat --printf &quot;%s:%a:%u:%g&quot; $i`:$md5:$sha1 $i; done; exit md5=`md5sum $i | cut -d &quot; &quot; -f 1` &amp;&amp; sha1=`sha1sum $i | cu
+INFO: Starting.
+FWD: 14612:644:0:0:509377d820692110c7a6cc83ef2c2da8:bf610c1fa14d84d8b3b44ec80b81788457f77420 /etc/sound/events/gtk-events-2.soundlist
+FWD: 22291:644:0:0:d6139aa9554d4997ea25ec2d56095f51:26b9ae7784943eecaeb2dcd4b2ae3a32371d61c8 /etc/sound/events/gnome-2.soundlist
+FWD: 83:644:0:0:9f87609f65b51761657c7d67881ae582:de82c03c535e9deb16aed94153883280891da2d7 /etc/modprobe.d/blacklist-firewire
+^C^C#
+</code></pre>
+
+<p>I only let the script run for a few seconds to see the output, but the
+key things to notice are the lines beginning with &ldquo;INFO&rdquo; or &ldquo;FWD&rdquo;.</p>
+
+<p>Anything that starts with &ldquo;<code>INFO</code>&rdquo; is logged to the
+<code>/var/ossec/logs/ossec.log</code> file for debugging and troubleshooting, we
+will make use of this later on in this blog. The &ldquo;<code>FWD</code>&rdquo; tag at the
+beginning of the line lets the OSSEC server store the HASH information.
+Where this becomes useful is when a file&rsquo;s contents change, the HASH
+will in turn change and OSSEC is able to notify you when this happens.</p>
+
+<p>Now let&rsquo;s complete adding our host to the OSSEC configuration.</p>
+
+<pre><code class="language-bash">obsd46# ossec-config --section agentless --add --host root@172.17.20.20 --type ssh_integrity_check_linux \
+--state periodic --argv &quot;/bin /etc /sbin&quot;
+</code></pre>
+
+<p>Let&rsquo;s verify it&rsquo;s what we expect.</p>
+
+<pre><code class="language-bash">obsd46# ossec-config --section agentless --show
+----------------------------------------
+type: ssh_integrity_check_linux
+frequency: 3600
+host: root@172.17.20.20
+state: periodic
+arguments: /bin /etc /sbin
+</code></pre>
+
+<p>Time to restart the deamons for the changes to take effect.</p>
+
+<pre><code>obsd46# /var/ossec/bin/ossec-control stop
+Killing ossec-monitord ..
+Killing ossec-logcollector ..
+ossec-remoted not running ..
+Killing ossec-syscheckd ..
+Killing ossec-analysisd ..
+Killing ossec-maild ..
+ossec-execd not running ..
+ossec-agentlessd not running ..
+OSSEC HIDS v2.2 Stopped
+obsd46# /var/ossec/bin/ossec-control start
+Starting OSSEC HIDS v2.2 (by Trend Micro Inc.)...
+Started ossec-agentlessd...
+Started ossec-maild...
+Started ossec-execd...
+Started ossec-analysisd...
+Started ossec-logcollector...
+Started ossec-remoted...
+Started ossec-syscheckd...
+Started ossec-monitord...
+Completed.
+</code></pre>
+
+<h3 id="agentless-test:22d710b97ad10f77ccd625d0dc30cfb4">Testing agentless</h3>
+
+<p>Checking the log files, we can see what the agentless security monitor
+has done so far.</p>
+
+<pre><code class="language-bash">obsd46# grep agentless logs/ossec.log
+2009/09/21 14:59:49 ossec-agentlessd: INFO: Started (pid: 15320).
+2009/09/21 14:59:51 ossec-agentlessd: INFO: Test passed for 'ssh_integrity_check_linux'.
+2009/09/21 15:00:53 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Started.
+2009/09/21 15:00:53 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Starting.
+2009/09/21 15:01:34 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Finished.
+</code></pre>
+
+<p>Now we have one last thing to do to see that it&rsquo;s working as expected,
+make a change to the file system on <code>172.17.20.20</code> that the ossec will
+notice on the next run. I am going to change the root password for now.</p>
+
+<pre><code class="language-bash">obsd46# ssh -i /var/ossec/.ssh/id_rsa root@172.17.20.20
+Last login: Tue Oct  6 14:38:48 2009 from 172.17.20.154
+[linux26.ptnsecurity.com ~]# passwd
+Changing password for user root.
+New UNIX password:
+Retype new UNIX password:
+passwd: all authentication tokens updated successfully.
+[linux26.ptnsecurity.com ~]# exit
+</code></pre>
+
+<p>Take a look at the logs for ossec-agentlessd to check the host. Again,
+we see that it completed another scan.</p>
+
+<pre><code class="language-bash">obsd46# grep agentless logs/ossec.log
+2009/09/21 15:18:27 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Started.
+2009/09/21 15:18:27 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Starting.
+2009/09/21 15:18:46 ossec-syscheckd: INFO: Finished creating syscheck database (pre-scan completed).
+2009/09/21 15:19:06 ossec-agentlessd: INFO: ssh_integrity_check_linux: root@172.17.20.20: Finished.
+</code></pre>
+
+<p>Note that we also received the following email notifying that the
+password has changed, a message that is very useful to report.</p>
+
+<pre><code class="language-bash">OSSEC HIDS Notification.
+2009 Sep 21 15:19:00
+
+Received From: (ssh_integrity_check_linux) root@172.17.20.20-&gt;syscheck
+Rule: 550 fired (level 7) -&gt; &quot;Integrity checksum changed.&quot;
+Portion of the log(s):
+
+Integrity checksum changed for: '/etc/shadow'
+Old md5sum was: '0d92e12c92f3edcf9d8876ea57c5f677'
+New md5sum is : '2bd51b61dea17c5682fb2c0cf4f92c63'
+Old sha1sum was: '2270c03a920ef8dd50e11cefdef046a8660f7a29'
+New sha1sum is : 'd9518ea9022b10d07f81925c6d7f2abb4364b548'
+
+--END OF NOTIFICATION
+</code></pre>
+
+<hr />
+
+<p>Week of OSSEC Links:</p>
+
+<ul>
+<li>Day 1: <a href="http://www.immutablesecurity.com/index.php/2009/10/25/week-of-ossec-day-1-detecting-world-writable-files/">Detecting World-Writable Files</a></li>
+<li>Day 2: <a href="http://www.immutablesecurity.com/index.php/2009/10/26/week-of-ossec-day-2-detecting-new-files/">Detecting New Files</a></li>
+<li>Day 3: <a href="http://www.immutablesecurity.com/index.php/2009/10/27/week-of-ossec-day-3-use-variables/">Using Variables</a></li>
+<li>Day 4: <a href="http://www.immutablesecurity.com/index.php/2009/10/28/week-of-ossec-day-4-using-groups/">Using Groups</a></li>
+<li>Day 5: <a href="http://www.immutablesecurity.com/index.php/2009/10/29/week-of-ossec-day-5-reusing-rule-ids/">Reusing Rule IDs</a></li>
+<li>Day 6: <a href="http://www.immutablesecurity.com/index.php/2009/10/30/week-of-ossec-day-6-developing-a-tuning-strategy/">Developing a Tuning Strategy</a></li>
+<li>Day 7: <a href="http://www.immutablesecurity.com/index.php/2009/10/31/week-of-ossec-day-7-developing-a-workflow/">Developing a Workflow</a></li>
+</ul>
+
+  </div>
+  
+</div>
+
+
+
+
+<script src="https://jeremyrossi.com/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+</html>
+

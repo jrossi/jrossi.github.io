@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>Ossec: The Great Makefile Refactor &middot; Jeremy Rossi</title>
+
+  
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/poole-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-overrides.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/hyde-x.css">
+  <link rel="stylesheet" href="https://jeremyrossi.com/css/highlight/sunburst.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://jeremyrossi.com/touch-icon-144-precomposed.png">
+  <link href="https://jeremyrossi.com/favicon.png" rel="icon">
+
+  
+  
+  
+  
+
+  <meta name="description" content="Your default page description">
+  <meta name="keywords" content="your,default,page,keywords">
+  
+</head>
+<body>
+<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      
+         
+      <a href="/"><img src="https://www.gravatar.com/avatar/b951587bdce7fa14e7f213ee6b2ed7aa?s=200"
+                       alt="gravatar" title="Jeremy Rossi"></a>
+      
+      <h1><a href="/">Jeremy Rossi</a></h1>
+      <p class="lead">haphazard writing, but just might work</p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/">Blog posts</a></li>
+      
+      <li class="sidebar-nav-item"><a href="https://jeremyrossi.com/about/">About Me</a></li>
+      
+    </ul>
+
+    <ul class="sidebar-nav">
+      <li class="sidebar-nav-item">
+      <a href="https://github.com/jrossi"><i class="fa fa-github-square fa-3x"></i></a>
+      
+      
+      <a href="https://www.linkedin.com/in/rossij"><i class="fa fa-linkedin-square fa-3x"></i></a>
+      
+      
+      <a href="https://twitter.com/jrossi"><i class="fa fa-twitter-square fa-3x"></i></a>
+      
+      
+      </li>
+    </ul>
+
+    
+
+    <p>Copyright &copy; 2016 <a href="https://jeremyrossi.com/license/">License</a><br/>
+       Powered by <a href="http://gohugo.io">Hugo</a> and <a href="https://github.com/zyro/hyde-x">Hyde-X</a></p>
+  </div>
+</div>
+
+
+<div class="content container">
+  <div class="post">
+    <h1>Ossec: The Great Makefile Refactor</h1>
+    <span class="post-date">Jan 2, 2016 &middot; 5 minute read
+    
+    <br/>
+    <a class="label" href="https://jeremyrossi.com/categories/programming">programming</a><a class="label" href="https://jeremyrossi.com/categories/community">community</a>
+    </span>
+    
+
+<p>This was an idea for a blog post around 1.5 years ago when the OSSEC team
+started the the great refactor, but sadly I did nothing with it till now.</p>
+
+<h2 id="ossec-build-that-always-worked-but-made-me-mad:232619b735b6a9ac24db9845a236c97d">OSSEC build that always worked, but made me mad</h2>
+
+<p>OSSEC has been using a cross platform build script written in sh for ages.
+This system had worked for ages and worked everyplace most of the time.  See
+that was the problem changes to the script were very error prone and always on
+systems we did not have access to test on (I am looking at you AIX and HPUX).
+Come to think about I don&rsquo;t think a single release did not cause an issue due
+to the sh build script.</p>
+
+<p>Another thing about the build system the sprawl.  To make changes you would
+need to at least review all the following files:</p>
+
+<ul>
+<li><code>install.sh</code></li>
+<li><code>src/Config.Make</code></li>
+<li><code>src/InstallServer.sh</code></li>
+<li><code>src/InstallAgent.sh</code></li>
+<li><code>src/Makeall</code></li>
+<li><code>src/Makefile</code></li>
+<li><code>**/Makefile</code> (*at least 20 files)</li>
+</ul>
+
+<p>This is a lot of places to check to made a change to the build.  Before you ask
+yes you needed to look into the <code>install.sh</code> has it had grown some logic that
+was not in other scripts.</p>
+
+<p>Given all this it easy to see why a change was needed, but the real reason I
+hated this systems was the last file in the above list: <code>Makefile</code>.  We have
+1000&rsquo;s of lines of logic in shell then still are using <code>make</code> incorrectly.</p>
+
+<p>Early in the talk about changing the build system one thing that came up as a
+requirement to not change the default <code>install.sh</code> interface.  It&rsquo;s simple and
+friendly and people love it over the standard <code>./configure &amp;&amp; make &amp;&amp; make
+install</code>.  So</p>
+
+<h2 id="one-makefile-to-rule-them-all:232619b735b6a9ac24db9845a236c97d">One Makefile to rule them all</h2>
+
+<p>I had done this once before years ago with <a href="https://waf.io/">waf</a> and that was not well
+received in 2010, and while it&rsquo;s a great build system OSSEC should not need
+python to compile. The disdain autotools/autoconf was very apparent when ever
+it came up in discussion.</p>
+
+<p>The choice seamed clear once we started just require <a href="https://www.gnu.org/software/make/">GNU Make</a>.
+This gave us a huge amount of flexibility and features, and is available on
+every platform.  While it&rsquo;s not default on all the platforms that OSSEC
+supports, but we thought it was a safe bet that someplace someone had a
+packages for installing <a href="https://www.gnu.org/software/make/">GNU Make</a>.</p>
+
+<p>I started to work and the <a href="https://github.com/ossec/ossec-hids/pull/334/files">first pull request</a> and this started the
+process of a day long hack-o-thon for the OSSEC team.  <strong>This was single best
+day of working on open source in my life</strong>.  People just kept doing more and
+feeding back and improving things so fast.  It was great to see and be a part
+of.</p>
+
+<p>The new Makefile build does a lot of things in a single file and is very large,
+but it handles everything in less code then the original system.</p>
+
+<h4 id="build-targets:232619b735b6a9ac24db9845a236c97d">Build targets</h4>
+
+<p>OSSEC has a few major build targets:  server, local, agent, and winagent.  We
+did not break this into two makefiles as their is so much overlap in code and
+how they are built.  We decided that command like argument would required for
+which binaries to compile.</p>
+
+<pre><code class="language-bash">$ make TARGET=server 
+# or 
+$ make TARGET=agent
+</code></pre>
+
+<p>Inside the makefile the logic is simple and straight forward.  As you can see
+here:</p>
+
+<pre><code class="language-make">ifndef TARGET
+  TARGET=failtarget
+endif # TARGET
+
+ifeq (${TARGET},agent)
+  DEFINES+=-DCLIENT
+  OSSEC_CONTROL_SRC=./init/ossec-client.sh
+  OSSEC_CONF_SRC=../etc/ossec-agent.conf
+endif
+
+ifeq (${TARGET},local)
+  DEFINES+=-DLOCAL
+  OSSEC_CONTROL_SRC=./init/ossec-local.sh
+  OSSEC_CONF_SRC=../etc/ossec-local.conf
+endif
+
+
+.PHONY: build
+build: ${TARGET}
+ifneq (${TARGET},failtarget)
+  ${MAKE} settings
+  @echo
+  ${QUIET_NOTICE}
+  @echo &quot;Done building ${TARGET}&quot;
+  ${QUIET_ENDCOLOR}
+endif
+  @echo
+
+</code></pre>
+
+<p>We used the <code>ifndef TARGET</code> it set it to <code>failtarget</code> if not command line
+argument was specified.  We figured always needing to define a target is a good
+safe bet.</p>
+
+<h4 id="features-selection:232619b735b6a9ac24db9845a236c97d">Features selection</h4>
+
+<p>Adding features at compile time is not a command line argument.   This allows
+for some simple logic to for adding defines and libraries for the build.  This
+logic repeats a lot.</p>
+
+<pre><code class="language-make">
+USE_INOTIFY=no 
+
+ifeq (${uname_S},Linux)
+    DEFINES+=-DINOTIFY_ENABLED
+    OSSEC_LDFLAGS+=-lpthread
+else
+
+ifneq (,$(filter ${USE_INOTIFY},auto yes y Y 1))
+  DEFINES+=-DINOTIFY_ENABLED
+  ifeq (${uname_S},FreeBSD)
+    OSSEC_LDFLAGS+=-linotify -L/usr/local/lib -I/usr/local/include
+    OSSEC_CFLAGS+=-I/usr/local/include
+  endif
+endif
+
+</code></pre>
+
+<p>As you can see in the above snippet Linux always enabled INOTIFY and if you
+have the library installed and are running FreeBSD you can enable it by running
+<code>make TARGET=agent USE_INOTIFY=y</code></p>
+
+<h4 id="databases-and-library-detection:232619b735b6a9ac24db9845a236c97d">Databases and library detection</h4>
+
+<p>The old database detection scripts had a lot of logic in them to get things to
+work, and porting that over into GNU Make was/is the complex part.</p>
+
+<blockquote>
+<p>Ok, stand back, I going to try boolean logic
+- Someone someplace about this code.</p>
+</blockquote>
+
+<pre><code class="language-make">MI :=
+PI :=
+ifdef DATABASE
+
+  ifeq (${DATABASE},mysql)
+    DEFINES+=-DMYSQL_DATABASE_ENABLED
+
+    ifdef MYSQL_CFLAGS
+      MI = ${MYSQL_CFLAGS}
+    else
+      MI := $(shell sh -c '${MY_CONFIG} --include 2&gt;/dev/null || echo ')
+
+      ifeq (${MI},) # BEGIN MI manula detection
+        ifneq (,$(wildcard /usr/include/mysql/mysql.h))
+          MI=&quot;-I/usr/include/mysql/&quot;
+        else
+          ifneq (,$(wildcard /usr/local/include/mysql/mysql.h))
+            MI=&quot;-I/usr/local/include/mysql/&quot;
+          endif  #
+        endif  #MI
+
+      endif
+    endif # MYSQL_CFLAGS
+
+    ifdef MYSQL_LIBS
+      ML = ${MYSQL_LIBS}
+    else
+      ML := $(shell sh -c '${MY_CONFIG} --libs 2&gt;/dev/null || echo ')
+
+      ifeq (${ML},)
+        ifneq (,$(wildcard /usr/lib/mysql/*))
+          ML=&quot;-L/usr/lib/mysql -lmysqlclient&quot;
+        else
+          ifneq (,$(wildcard /usr/lib64/mysql/*))
+            ML=&quot;-L/usr/lib64/mysql -lmysqlclient&quot;
+          else
+            ifneq (,$(wildcard /usr/local/lib/mysql/*))
+              ML=&quot;-L/usr/local/lib/mysql -lmysqlclient&quot;
+            else
+              ifneq (,$(wildcard /usr/local/lib64/mysql/*))
+                ML=&quot;-L/usr/local/lib64/mysql -lmysqlclient&quot;
+              endif # local/lib64
+            endif # local/lib
+          endif # lib54
+        endif # lib
+      endif
+    endif # MYSQL_LIBS
+
+    OSSEC_LDFLAGS+=${ML}
+
+  else # DATABASE
+
+    ifeq (${DATABASE}, pgsql)
+      DEFINES+=-DPGSQL_DATABASE_ENABLED
+
+      ifneq (${PGSQL_LIBS},)
+        PL:=${PGSQL_LIBS}
+      else
+        PL:=$(shell sh -c '(${PG_CONFIG} --libdir --pkglibdir 2&gt;/dev/null | sed &quot;s/^/-L/g&quot; | xargs ) || echo ')
+      endif
+
+      ifneq (${PGSQL_CFLAGS},)
+        PI:=${PGSQL_CFLAGS}
+      else
+        PI:=$(shell sh -c '(${PG_CONFIG} --includedir --pkgincludedir 2&gt;/dev/null | sed &quot;s/^/-I/g&quot; | xargs ) || echo ')
+      endif
+
+      # XXX need some basic autodetech stuff here.
+
+      OSSEC_LDFLAGS+=${PL}
+      OSSEC_LDFLAGS+=-lpq
+
+    endif # pgsql
+  endif # mysql
+endif # DATABASE
+
+</code></pre>
+
+<p>Yeah we know, but this includes all the old logic that the scripts system
+preformed and some new ones.</p>
+
+<p>If anyone knows of a better way we would love to hear it ;)</p>
+
+<h2 id="today:232619b735b6a9ac24db9845a236c97d">Today</h2>
+
+<p>I in writing up this Blog post I went back end reviewed the changes to the
+makefile over the last year and <sup>1</sup>&frasl;<sub>2</sub>, and not major changes to structure or
+logic have happened.  Just new features and improvements, and looks like
+a solid foundation.</p>
+
+  </div>
+  
+</div>
+
+
+
+
+<script src="https://jeremyrossi.com/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+</html>
+
